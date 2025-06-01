@@ -284,6 +284,22 @@ class MockCategoryDao extends _i1.Mock implements _i6.CategoryDao {
           as _i5.Future<bool>);
 
   @override
+  _i5.Future<bool> categoryExists(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#categoryExists, [id]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<int> getCategoriesCount() =>
+      (super.noSuchMethod(
+            Invocation.method(#getCategoriesCount, []),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
   _i5.Stream<T> createStream<T extends Object>(
     _i4.QueryStreamFetcher<T>? stmt,
   ) =>
