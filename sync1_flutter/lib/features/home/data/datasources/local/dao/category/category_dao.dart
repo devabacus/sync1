@@ -1,4 +1,3 @@
-import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart';
 
 import '../../../../../../../core/database/local/interface/i_database_service.dart';
@@ -10,8 +9,6 @@ part 'category_dao.g.dart';
 @DriftAccessor(tables: [CategoryTable])
 class CategoryDao extends DatabaseAccessor<AppDatabase>
     with _$CategoryDaoMixin {
-  final Uuid _uuid = Uuid();
-
   CategoryDao(IDatabaseService databaseService)
     : super(databaseService.database);
 
@@ -25,27 +22,85 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
       (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();
 
   Future<String> createCategory(CategoryTableCompanion companion) async {
-    String idToInsert;
-    CategoryTableCompanion companionForInsert;
-
-    if (companion.id.present && companion.id.value != null && companion.id.value.isNotEmpty) {
-      idToInsert = companion.id.value;
-      companionForInsert = companion;
-    } else {
-      idToInsert = _uuid.v7();
-      companionForInsert = companion.copyWith(id: Value(idToInsert));
+    if (!companion.id.present || companion.id.value.isEmpty) {
+      throw ArgumentError('ID категории должен быть предоставлен клиентом');
     }
 
-    await into(categoryTable).insert(companionForInsert);
-    return idToInsert;
+    if (!companion.title.present || companion.title.value.trim().isEmpty) {
+      throw ArgumentError('Название категории не может быть пустым');
+    }
+
+    final id = companion.id.value;
+
+    try {
+      final existingCategory =
+          await (select(categoryTable)
+            ..where((t) => t.id.equals(id))).getSingleOrNull();
+
+      if (existingCategory != null) {
+        throw StateError('Категория с ID $id уже существует');
+      }
+
+      await into(categoryTable).insert(companion);
+      return id;
+    } catch (e) {
+      print('Ошибка создания категории: $e');
+      rethrow;
+    }
   }
 
-  Future<bool> updateCategory(CategoryTableCompanion category) =>
-    update(categoryTable).replace(category);
+  Future<bool> updateCategory(CategoryTableCompanion category) async {
+    if (!category.id.present || category.id.value.isEmpty) {
+      throw ArgumentError(
+        'ID категории должен быть предоставлен для обновления',
+      );
+    }
+
+    if (!category.title.present || category.title.value.trim().isEmpty) {
+      throw ArgumentError('Название категории не может быть пустым');
+    }
+
+    try {
+      final result = await update(categoryTable).replace(category);
+      return result;
+    } catch (e) {
+      print('Ошибка обновления категории: $e');
+      rethrow;
+    }
+  }
 
   Future<bool> deleteCategory(String id) async {
-    final result =
-        await (delete(categoryTable)..where((t) => t.id.equals(id))).go();
-    return result > 0;
+    if (id.isEmpty) {
+      throw ArgumentError('ID категории не может быть пустым');
+    }
+
+    try {
+      final result =
+          await (delete(categoryTable)..where((t) => t.id.equals(id))).go();
+      return result > 0;
+    } catch (e) {
+      print('Ошибка удаления категории: $e');
+      rethrow;
+    }
+  }
+
+  /// Проверяет существование категории по ID
+  Future<bool> categoryExists(String id) async {
+    if (id.isEmpty) return false;
+
+    final category =
+        await (select(categoryTable)
+          ..where((t) => t.id.equals(id))).getSingleOrNull();
+
+    return category != null;
+  }
+
+  /// Получает количество категорий
+  Future<int> getCategoriesCount() async {
+    final countQuery = selectOnly(categoryTable)
+      ..addColumns([categoryTable.id.count()]);
+
+    final result = await countQuery.getSingle();
+    return result.read(categoryTable.id.count()) ?? 0;
   }
 }
