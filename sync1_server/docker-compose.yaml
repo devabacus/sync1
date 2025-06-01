@@ -1,0 +1,44 @@
+services:
+  # Development services
+  postgres:
+    image: postgres:16.3
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sync1
+      POSTGRES_PASSWORD: "2KPyuIMywaBjW3mj1pDHzbKtc0r3FVn-"
+    volumes:
+      - sync1_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.2.6
+    ports:
+      - "8091:6379"
+    command: redis-server --requirepass "ZMJk14FlWHQQSY4nnKE2B4q_toyxwd1J"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  # Test services
+  postgres_test:
+    image: postgres:16.3
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sync1_test
+      POSTGRES_PASSWORD: "E_51CBetj3APmw1KP5YrKvT5naHDpyv0"
+    volumes:
+      - sync1_test_data:/var/lib/postgresql/data
+
+  redis_test:
+    image: redis:6.2.6
+    ports:
+      - "9091:6379"
+    command: redis-server --requirepass "0d7WojmQWxhDmGjxKx1OT-qFX0POf917"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+volumes:
+  sync1_data:
+  sync1_test_data:

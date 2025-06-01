@@ -1,0 +1,23 @@
+
+project:
+  name: "sync1"
+  
+server:
+  ip: ""
+  http_port: "80:80"
+  https_port: "443:443"
+  domain: "my-points.ru"
+  subdomain:
+    api: "api"
+    web: "web"
+    insights: "insights"
+  email: "frolprank@gmail.com"
+  
+database:
+  name: "serverpod"
+  user: "postgres"  
+  
+deployment:
+  organization: "devabacus"
+  ssh_user: "serverpod"
+
