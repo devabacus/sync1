@@ -1,0 +1,8 @@
+category:
+  - createCategory:
+  - getCategoryById:
+  - getCategories:
+  - updateCategory:
+  - deleteCategory:
+greeting:
+  - hello:

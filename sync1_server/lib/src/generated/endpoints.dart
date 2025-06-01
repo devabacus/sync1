@@ -10,19 +10,116 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
-import '../greeting_endpoint.dart' as _i2;
+import '../endpoints/category_endpoint.dart' as _i2;
+import '../greeting_endpoint.dart' as _i3;
+import 'package:sync1_server/src/generated/category.dart' as _i4;
+import 'package:uuid/uuid_value.dart' as _i5;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
   void initializeEndpoints(_i1.Server server) {
     var endpoints = <String, _i1.Endpoint>{
-      'greeting': _i2.GreetingEndpoint()
+      'category': _i2.CategoryEndpoint()
+        ..initialize(
+          server,
+          'category',
+          null,
+        ),
+      'greeting': _i3.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
           null,
-        )
+        ),
     };
+    connectors['category'] = _i1.EndpointConnector(
+      name: 'category',
+      endpoint: endpoints['category']!,
+      methodConnectors: {
+        'createCategory': _i1.MethodConnector(
+          name: 'createCategory',
+          params: {
+            'category': _i1.ParameterDescription(
+              name: 'category',
+              type: _i1.getType<_i4.Category>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint).createCategory(
+            session,
+            params['category'],
+          ),
+        ),
+        'getCategoryById': _i1.MethodConnector(
+          name: 'getCategoryById',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<_i5.UuidValue>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint).getCategoryById(
+            session,
+            params['id'],
+          ),
+        ),
+        'getCategories': _i1.MethodConnector(
+          name: 'getCategories',
+          params: {},
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint)
+                  .getCategories(session),
+        ),
+        'updateCategory': _i1.MethodConnector(
+          name: 'updateCategory',
+          params: {
+            'category': _i1.ParameterDescription(
+              name: 'category',
+              type: _i1.getType<_i4.Category>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint).updateCategory(
+            session,
+            params['category'],
+          ),
+        ),
+        'deleteCategory': _i1.MethodConnector(
+          name: 'deleteCategory',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<_i5.UuidValue>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint).deleteCategory(
+            session,
+            params['id'],
+          ),
+        ),
+      },
+    );
     connectors['greeting'] = _i1.EndpointConnector(
       name: 'greeting',
       endpoint: endpoints['greeting']!,
@@ -40,7 +137,7 @@ class Endpoints extends _i1.EndpointDispatch {
             _i1.Session session,
             Map<String, dynamic> params,
           ) async =>
-              (endpoints['greeting'] as _i2.GreetingEndpoint).hello(
+              (endpoints['greeting'] as _i3.GreetingEndpoint).hello(
             session,
             params['name'],
           ),
