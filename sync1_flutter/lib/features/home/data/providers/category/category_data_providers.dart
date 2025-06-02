@@ -7,6 +7,7 @@ import '../../datasources/local/dao/category/category_dao.dart';
 import '../../datasources/local/interfaces/category_local_datasource_service.dart';
 import '../../datasources/local/sources/category_local_data_source.dart';
 import '../../repositories/category_repository_impl.dart';
+import 'category_remote_data_providers.dart'; // <-- Наш новый импорт
 
 part 'category_data_providers.g.dart';
 
@@ -24,7 +25,10 @@ ICategoryLocalDataSource categoryLocalDataSource(Ref ref) {
 
 @riverpod
 ICategoryRepository categoryRepository(Ref ref) {
-  final localDataSource = ref.read(categoryLocalDataSourceProvider);
-  return CategoryRepositoryImpl(localDataSource);
-}
+  // Получаем обе зависимости: локальную и удаленную
+  final localDataSource = ref.watch(categoryLocalDataSourceProvider);
+  final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider); // <-- Новая зависимость
 
+  // Передаем обе зависимости в конструктор
+  return CategoryRepositoryImpl(localDataSource, remoteDataSource);
+}

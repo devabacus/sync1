@@ -38,4 +38,34 @@ class CategoryEndpoint extends Endpoint {
       return false;
     }
   }
+
+  /// Streaming method для real-time обновлений категорий
+  /// Отправляет текущий список категорий и все последующие изменения
+  Stream<List<Category>> watchCategories(Session session) async* {
+    // Сначала отправляем текущий список категорий
+    var categories = await Category.db.find(
+      session,
+      orderBy: (c) => c.title,
+    );
+    yield categories;
+
+    // Затем периодически проверяем изменения
+    // В production это можно заменить на database triggers или 
+    // более эффективный механизм отслеживания изменений
+    while (true) {
+      await Future.delayed(Duration(seconds: 2));
+      
+      try {
+        var updatedCategories = await Category.db.find(
+          session,
+          orderBy: (c) => c.title,
+        );
+        yield updatedCategories;
+      } catch (e) {
+        session.log('Ошибка при получении категорий в stream: $e');
+        // При ошибке не прерываем stream, просто логируем
+        continue;
+      }
+    }
+  }
 }

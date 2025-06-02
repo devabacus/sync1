@@ -57,6 +57,17 @@ class EndpointCategory extends _i1.EndpointRef {
         'deleteCategory',
         {'id': id},
       );
+
+  /// Streaming method для real-time обновлений категорий
+  /// Отправляет текущий список категорий и все последующие изменения
+  _i2.Stream<List<_i3.Category>> watchCategories() =>
+      caller.callStreamingServerEndpoint<_i2.Stream<List<_i3.Category>>,
+          List<_i3.Category>>(
+        'category',
+        'watchCategories',
+        {},
+        {},
+      );
 }
 
 /// This is an example endpoint that returns a greeting message through its [hello] method.

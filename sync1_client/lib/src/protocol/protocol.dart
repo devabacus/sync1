@@ -59,6 +59,9 @@ class Protocol extends _i1.SerializationManager {
     if (data is _i3.Category) {
       return 'Category';
     }
+    if (data is List<_i4.Category>) {
+      return 'List<Category>';
+    }
     return null;
   }
 
@@ -73,6 +76,9 @@ class Protocol extends _i1.SerializationManager {
     }
     if (dataClassName == 'Category') {
       return deserialize<_i3.Category>(data['data']);
+    }
+    if (dataClassName == 'List<Category>') {
+      return deserialize<List<_i4.Category>>(data['data']);
     }
     return super.deserializeByClassName(data);
   }

@@ -4,5 +4,6 @@ category:
   - getCategories:
   - updateCategory:
   - deleteCategory:
+  - watchCategories:
 greeting:
   - hello:
