@@ -32,3 +32,4 @@ ICategoryRepository categoryRepository(Ref ref) {
   // Передаем обе зависимости в конструктор
   return CategoryRepositoryImpl(localDataSource, remoteDataSource);
 }
+

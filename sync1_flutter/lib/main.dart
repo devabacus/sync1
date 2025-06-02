@@ -11,7 +11,7 @@ void main() async{
   runApp(
   ProviderScope(
     observers: [
-      TalkerRiverpodObserver(),
+      // TalkerRiverpodObserver(),
     ],
     child: App(),
   )

@@ -139,30 +139,50 @@ Future<String> createCategory(CategoryEntity category) async {
     }
   }
 
-  /// Ручная синхронизация локальных данных с сервером
-  /// Можно вызвать при восстановлении интернет-соединения
-  Future<void> syncWithServer() async {
+   Future<void> syncWithServer() async {
     try {
       print('Начинаем синхронизацию с сервером...');
       
-      // 1. Получаем локальные категории
-      final localModels = await _localDataSource.getCategories();
-      final localEntities = localModels.toEntities();
+      // 1. Получаем все категории с сервера
+      final serverCategories = await _remoteDataSource.getCategories();
       
-      // 2. Конвертируем в Serverpod модели для синхронизации
-      final serverpodCategories = localEntities.map((entity) => 
-        serverpod.Category(
-          id: serverpod.UuidValue.fromString(entity.id),
-          title: entity.title,
-        )
-      ).toList();
-      
-      // 3. Синхронизируем с сервером
-      final syncedCategories = await _remoteDataSource.syncCategories(serverpodCategories);
-      
-      // 4. TODO: Более сложная логика merge - conflict resolution
-      // Пока просто логируем результат
-      print('Синхронизация завершена. Локальных: ${localEntities.length}, Серверных: ${syncedCategories.length}');
+      // 2. Получаем все локальные категории
+      final localCategories = await _localDataSource.getCategories();
+
+      // 3. Преобразуем списки в карты для удобного доступа по ID
+      final serverMap = {for (var cat in serverCategories) cat.id.toString(): cat};
+      final localMap = {for (var cat in localCategories) cat.id: cat};
+
+      // 4. Обновляем и добавляем категории с сервера в локальную базу
+      for (final serverCategory in serverCategories) {
+        final serverCatId = serverCategory.id.toString();
+        final localCategory = localMap[serverCatId];
+
+        final categoryToUpsert = CategoryEntity(
+          id: serverCatId,
+          title: serverCategory.title
+        ).toModel();
+
+        if (localCategory == null) {
+          // Категория есть на сервере, но нет локально -> добавляем
+          print('Sync: Добавляем локально категорию с сервера: ${categoryToUpsert.title}');
+          await _localDataSource.createCategory(categoryToUpsert);
+        } else if (localCategory.title != serverCategory.title) {
+          // Категория есть и там, и там, но отличается -> обновляем локальную
+           print('Sync: Обновляем локально категорию с сервера: ${categoryToUpsert.title}');
+          await _localDataSource.updateCategory(categoryToUpsert);
+        }
+      }
+
+      // 5. Загружаем на сервер локально созданные категории
+      for (final localCategory in localCategories) {
+        if (!serverMap.containsKey(localCategory.id)) {
+           print('Sync: Загружаем на сервер новую локальную категорию: ${localCategory.title}');
+          await _syncCreateToServer(localCategory.toEntity());
+        }
+      }
+
+      print('Синхронизация завершена.');
       
     } catch (e) {
       print('Ошибка синхронизации с сервером: $e');

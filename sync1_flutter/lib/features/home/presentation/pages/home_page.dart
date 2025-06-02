@@ -30,6 +30,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text('Категории'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: () {
+              ref.read(categoriesProvider.notifier).syncCategories().then((_){
+                 _showSnackBar('Синхронизация завершена');
+              }).catchError((error){
+                 _showSnackBar('Ошибка синхронизации: $error', isError: true);
+              });
+            },
+            tooltip: 'Синхронизировать',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
