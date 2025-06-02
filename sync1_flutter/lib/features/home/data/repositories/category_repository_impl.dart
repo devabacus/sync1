@@ -50,18 +50,23 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   }
 
   @override
-  Future<String> createCategory(CategoryEntity category) async {
-    // 1. Сначала сохраняем локально (для мгновенного отклика UI)
-    final localId = await _localDataSource.createCategory(category.toModel());
-    
-    // 2. Асинхронно отправляем на сервер (fire-and-forget)
-    _syncCreateToServer(category).catchError((error) {
-      print('Ошибка синхронизации создания на сервер: $error');
-      // В production здесь можно добавить retry логику или queue
-    });
-    
-    return localId;
-  }
+Future<String> createCategory(CategoryEntity category) async {
+  print('🔵 Repository: Создаем категорию локально: ${category.title}');
+  
+  // 1. Сохраняем локально
+  final localId = await _localDataSource.createCategory(category.toModel());
+  print('✅ Repository: Локально сохранено с ID: $localId');
+  
+  // 2. Синхронизируем с сервером
+  print('🌐 Repository: Отправляем на сервер...');
+  _syncCreateToServer(category).then((_) {
+    print('✅ Repository: Синхронизация завершена успешно');
+  }).catchError((error) {
+    print('❌ Repository: Ошибка синхронизации: $error');
+  });
+  
+  return localId;
+}
 
   @override
   Future<bool> updateCategory(CategoryEntity category) async {

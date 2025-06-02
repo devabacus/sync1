@@ -35,15 +35,19 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   }
 
   @override
-  Future<Category> createCategory(Category category) async {
-    try {
-      final createdCategory = await _client.category.createCategory(category);
-      return createdCategory;
-    } catch (e) {
-      print('Ошибка создания категории: $e');
-      rethrow;
-    }
+Future<Category> createCategory(Category category) async {
+  print('🚀 Remote: Отправляем на сервер: ${category.title}');
+  print('🚀 Remote: Server URL: ${_client.host}'); // Проверьте URL
+  
+  try {
+    final result = await _client.category.createCategory(category);
+    print('✅ Remote: Успешно создано на сервере');
+    return result;
+  } catch (e) {
+    print('❌ Remote: Ошибка создания на сервере: $e');
+    rethrow;
   }
+}
 
   @override
   Future<bool> updateCategory(Category category) async {
@@ -86,12 +90,15 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   /// Подключается к серверному streaming методу
   void _connectToServerStream() {
     try {
+          print('🌊 Подключаемся к server stream...');
+
       // Используем настоящий Serverpod streaming method
       final serverStream = _client.category.watchCategories();
       
       _streamSubscription = serverStream.listen(
         (categories) {
           // Перенаправляем данные в наш broadcast stream
+           print('🔄 Получены данные из stream: ${categories.length} категорий');
           if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
             _categoriesStreamController!.add(categories);
           }

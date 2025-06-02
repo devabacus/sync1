@@ -43,6 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             Expanded(
               child: _buildCategoriesList(categoriesAsyncValue),
             ),
+            
           ],
         ),
       ),
@@ -86,6 +87,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   icon: const Icon(Icons.add),
                   label: const Text('Добавить'),
                 ),
+                
               ],
             ),
           ],
