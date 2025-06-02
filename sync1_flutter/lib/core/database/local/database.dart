@@ -27,7 +27,6 @@ MigrationStrategy get migration => MigrationStrategy(
       },
     );
 
-
   static QueryExecutor _openConnection() {
     return driftDatabase(
       name: 'sync1_flutter',

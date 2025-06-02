@@ -3,14 +3,14 @@ project:
   name: "sync1"
   
 server:
-  ip: ""
+  ip: "5.129.199.196"
   http_port: "80:80"
   https_port: "443:443"
   domain: "my-points.ru"
   subdomain:
-    api: "api"
-    web: "web"
-    insights: "insights"
+    api: "api2"
+    web: "web2"
+    insights: "insights2"
   email: "frolprank@gmail.com"
   
 database:
