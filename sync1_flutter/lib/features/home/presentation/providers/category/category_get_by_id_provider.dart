@@ -28,4 +28,4 @@ Future<CategoryEntity?> getCategoryById(GetCategoryByIdRef ref, String id) async
   // Если в кеше нет или кеш еще не загружен, делаем прямой запрос к базе
   final categoryFromDb = await ref.read(getCategoryByIdUseCaseProvider)(id);
   return categoryFromDb;
-}
+} 
