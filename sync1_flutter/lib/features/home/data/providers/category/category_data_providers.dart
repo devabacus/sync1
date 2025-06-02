@@ -25,6 +25,7 @@ ICategoryLocalDataSource categoryLocalDataSource(Ref ref) {
 
 @riverpod
 ICategoryRepository categoryRepository(Ref ref) {
+  ref.keepAlive();
   // Получаем обе зависимости: локальную и удаленную
   final localDataSource = ref.watch(categoryLocalDataSourceProvider);
   final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider); // <-- Новая зависимость

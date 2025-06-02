@@ -11,6 +11,7 @@ part 'category_remote_data_providers.g.dart';
 /// Провайдер для Remote Data Source категорий
 @riverpod
 ICategoryRemoteDataSource categoryRemoteDataSource(Ref ref) {
+  ref.keepAlive();
   final client = ref.watch(serverpodClientProvider);
   final remoteDataSource = CategoryRemoteDataSource(client);
   

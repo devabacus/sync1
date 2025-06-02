@@ -28,6 +28,7 @@ ServerpodConfig serverpodConfig(Ref ref) {
 /// Основной провайдер Serverpod клиента
 @riverpod
 Client serverpodClient(Ref ref) {
+  ref.keepAlive();
   final config = ref.watch(serverpodConfigProvider);
   
   // Создаем простой клиент без дополнительных мониторов
