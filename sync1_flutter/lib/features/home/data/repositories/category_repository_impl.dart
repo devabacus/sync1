@@ -1,27 +1,118 @@
+// lib/features/home/data/repositories/category_repository_impl.dart
+
 import 'dart:async';
+
+import 'package:drift/drift.dart';
 import 'package:sync1_client/sync1_client.dart' as serverpod;
+
+import '../../../../core/database/local/database.dart';
+import '../../domain/entities/category/category.dart';
+import '../../domain/entities/extensions/category_entity_extension.dart';
+import '../../domain/repositories/category_repository.dart';
 import '../datasources/local/interfaces/category_local_datasource_service.dart';
+import '../datasources/local/sources/category_local_data_source.dart';
 import '../datasources/remote/interfaces/category_remote_datasource_service.dart';
 import '../models/extensions/category_model_extension.dart';
-import '../../domain/entities/extensions/category_entity_extension.dart';
-import '../../domain/entities/category/category.dart';
-import '../../domain/repositories/category_repository.dart';
 
-/// Offline-first Repository для категорий
-/// Работает с локальным (Drift) и удаленным (Serverpod) источниками данных
+/// Offline-first Repository для категорий с автоматической синхронизацией
 class CategoryRepositoryImpl implements ICategoryRepository {
   final ICategoryLocalDataSource _localDataSource;
   final ICategoryRemoteDataSource _remoteDataSource;
+  StreamSubscription? _serverStreamSubscription;
 
   CategoryRepositoryImpl(
     this._localDataSource,
     this._remoteDataSource,
-  );
+  ) {
+    // Автоматически запускаем синхронизацию при создании репозитория
+    _initServerSync();
+  }
 
+  void _initServerSync() {
+    if (_serverStreamSubscription != null) return;
+
+    print('🟢 Инициализация автоматической синхронизации с сервером...');
+    _serverStreamSubscription = _remoteDataSource.watchCategories().listen(
+      (serverCategories) {
+        print('🔄 Получено обновление с сервера: ${serverCategories.length} категорий.');
+        _performSync(serverCategories);
+      },
+      onError: (error) {
+        print('❌ Ошибка в потоке данных с сервера: $error');
+      },
+      onDone: () {
+        print('⚫️ Поток данных с сервера завершен.');
+        _serverStreamSubscription = null;
+      },
+    );
+  }
+
+  /// Основная логика синхронизации. Стратегия: "сервер - единственный источник правды".
+  Future<void> _performSync(List<serverpod.Category> serverCategories) async {
+    try {
+      // Это простая и надежная стратегия: локальная база полностью отражает состояние сервера.
+      final categoryDao = (_localDataSource as CategoryLocalDataSource).categoryDao;
+
+      await categoryDao.db.transaction(() async {
+        // 1. Полностью очищаем локальную таблицу
+        await categoryDao.deleteAllCategories();
+        
+        // 2. Вставляем все категории, полученные с сервера
+        final companions = serverCategories.map((c) => 
+            CategoryTableCompanion.insert(
+              id: Value(c.id.toString()),
+              title: c.title,
+            )
+        ).toList();
+
+        if (companions.isNotEmpty) {
+          await categoryDao.insertCategories(companions);
+        }
+      });
+      print('✅ Авто-синхронизация завершена. Локальная БД обновлена.');
+
+    } catch (e) {
+      print('❌ Ошибка во время выполнения авто-синхронизации: $e');
+    }
+  }
+
+  @override
+  Stream<List<CategoryEntity>> watchCategories() {
+    // UI по-прежнему слушает только локальную базу данных для максимальной отзывчивости
+    return _localDataSource.watchCategories().map(
+      (models) => models.toEntities(),
+    );
+  }
+
+  @override
+  Future<String> createCategory(CategoryEntity category) async {
+    // 1. Оптимистично создаем локально
+    final localId = await _localDataSource.createCategory(category.toModel());
+    
+    // 2. Отправляем на сервер. Изменения придут обратно через stream.
+    _syncCreateToServer(category).catchError((error) {
+      print('❌ Не удалось отправить создание на сервер: $error');
+      // Здесь можно добавить логику обработки ошибок, например, откат локального создания
+    });
+    
+    return localId;
+  }
+  
+  // ... другие методы CRUD (update, delete) остаются такими же,
+  // они так же оптимистично обновляют локальные данные и отправляют изменения на сервер.
+
+  @override
+  void dispose() {
+    print('Disposing CategoryRepository и отмена подписки на сервер.');
+    _serverStreamSubscription?.cancel();
+    _serverStreamSubscription = null;
+  }
+  
+  // Остальные методы (getCategories, getCategoryById, update, delete, _sync...) остаются без изменений.
+  
   @override
   Future<List<CategoryEntity>> getCategories() async {
     try {
-      // Offline-first: всегда возвращаем локальные данные
       final localCategories = await _localDataSource.getCategories();
       return localCategories.toEntities();
     } catch (e) {
@@ -29,15 +120,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       rethrow;
     }
   }
-
-  @override
-  Stream<List<CategoryEntity>> watchCategories() {
-    // Основной поток - всегда из локальной БД для максимальной отзывчивости
-    return _localDataSource.watchCategories().map(
-      (models) => models.toEntities(),
-    );
-  }
-
+  
   @override
   Future<CategoryEntity> getCategoryById(String id) async {
     try {
@@ -48,177 +131,71 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       rethrow;
     }
   }
-
-  @override
-Future<String> createCategory(CategoryEntity category) async {
-  print('🔵 Repository: Создаем категорию локально: ${category.title}');
   
-  // 1. Сохраняем локально
-  final localId = await _localDataSource.createCategory(category.toModel());
-  print('✅ Repository: Локально сохранено с ID: $localId');
-  
-  // 2. Синхронизируем с сервером
-  print('🌐 Repository: Отправляем на сервер...');
-  _syncCreateToServer(category).then((_) {
-    print('✅ Repository: Синхронизация завершена успешно');
-  }).catchError((error) {
-    print('❌ Repository: Ошибка синхронизации: $error');
-  });
-  
-  return localId;
-}
-
   @override
   Future<bool> updateCategory(CategoryEntity category) async {
-    // 1. Сначала обновляем локально
     final localResult = await _localDataSource.updateCategory(category.toModel());
-    
-    // 2. Асинхронно отправляем на сервер
     _syncUpdateToServer(category).catchError((error) {
       print('Ошибка синхронизации обновления на сервер: $error');
     });
-    
     return localResult;
   }
 
   @override
   Future<bool> deleteCategory(String id) async {
-    // 1. Сначала удаляем локально
     final localResult = await _localDataSource.deleteCategory(id);
-    
-    // 2. Асинхронно удаляем на сервере
     _syncDeleteToServer(id).catchError((error) {
       print('Ошибка синхронизации удаления на сервер: $error');
     });
-    
     return localResult;
   }
 
-  /// Синхронизирует создание категории с сервером
   Future<void> _syncCreateToServer(CategoryEntity category) async {
     try {
-      // Конвертируем в Serverpod модель
       final serverpodCategory = serverpod.Category(
         id: serverpod.UuidValue.fromString(category.id),
         title: category.title,
       );
-      
       await _remoteDataSource.createCategory(serverpodCategory);
-      print('Категория успешно создана на сервере: ${category.title}');
     } catch (e) {
       print('Не удалось создать категорию на сервере: $e');
       rethrow;
     }
   }
 
-  /// Синхронизирует обновление категории с сервером
   Future<void> _syncUpdateToServer(CategoryEntity category) async {
     try {
       final serverpodCategory = serverpod.Category(
         id: serverpod.UuidValue.fromString(category.id),
         title: category.title,
       );
-      
       await _remoteDataSource.updateCategory(serverpodCategory);
-      print('Категория успешно обновлена на сервере: ${category.title}');
     } catch (e) {
       print('Не удалось обновить категорию на сервере: $e');
       rethrow;
     }
   }
 
-  /// Синхронизирует удаление категории с сервером
   Future<void> _syncDeleteToServer(String id) async {
     try {
       final uuidValue = serverpod.UuidValue.fromString(id);
       await _remoteDataSource.deleteCategory(uuidValue);
-      print('Категория успешно удалена на сервере: $id');
     } catch (e) {
       print('Не удалось удалить категорию на сервере: $e');
       rethrow;
     }
   }
 
-   Future<void> syncWithServer() async {
+  @override
+  Future<void> syncWithServer() async {
     try {
-      print('Начинаем синхронизацию с сервером...');
-      
-      // 1. Получаем все категории с сервера
+      print('Начинаем РУЧНУЮ синхронизацию с сервером...');
       final serverCategories = await _remoteDataSource.getCategories();
-      
-      // 2. Получаем все локальные категории
-      final localCategories = await _localDataSource.getCategories();
-
-      // 3. Преобразуем списки в карты для удобного доступа по ID
-      final serverMap = {for (var cat in serverCategories) cat.id.toString(): cat};
-      final localMap = {for (var cat in localCategories) cat.id: cat};
-
-      // 4. Обновляем и добавляем категории с сервера в локальную базу
-      for (final serverCategory in serverCategories) {
-        final serverCatId = serverCategory.id.toString();
-        final localCategory = localMap[serverCatId];
-
-        final categoryToUpsert = CategoryEntity(
-          id: serverCatId,
-          title: serverCategory.title
-        ).toModel();
-
-        if (localCategory == null) {
-          // Категория есть на сервере, но нет локально -> добавляем
-          print('Sync: Добавляем локально категорию с сервера: ${categoryToUpsert.title}');
-          await _localDataSource.createCategory(categoryToUpsert);
-        } else if (localCategory.title != serverCategory.title) {
-          // Категория есть и там, и там, но отличается -> обновляем локальную
-           print('Sync: Обновляем локально категорию с сервера: ${categoryToUpsert.title}');
-          await _localDataSource.updateCategory(categoryToUpsert);
-        }
-      }
-
-      // 5. Загружаем на сервер локально созданные категории
-      for (final localCategory in localCategories) {
-        if (!serverMap.containsKey(localCategory.id)) {
-           print('Sync: Загружаем на сервер новую локальную категорию: ${localCategory.title}');
-          await _syncCreateToServer(localCategory.toEntity());
-        }
-      }
-
-      print('Синхронизация завершена.');
-      
+      await _performSync(serverCategories);
+      print('Ручная синхронизация завершена.');
     } catch (e) {
-      print('Ошибка синхронизации с сервером: $e');
+      print('Ошибка ручной синхронизации с сервером: $e');
       rethrow;
-    }
-  }
-
-  /// Проверка подключения к серверу
-  Future<bool> isServerAvailable() async {
-    try {
-      return await _remoteDataSource.checkConnection();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Подписка на изменения с сервера для синхронизации
-  /// В production это может запускаться периодически или при восстановлении соединения
-  Stream<List<CategoryEntity>> watchServerChanges() async* {
-    try {
-      await for (final serverCategories in _remoteDataSource.watchCategories()) {
-        // Конвертируем Serverpod модели в Entity
-        final entities = serverCategories.map((serverpodCategory) => 
-          CategoryEntity(
-            id: serverpodCategory.id!.toString(),
-            title: serverpodCategory.title,
-          )
-        ).toList();
-        
-        yield entities;
-        
-        // TODO: Здесь можно добавить логику автоматической синхронизации
-        // с локальной БД при получении изменений с сервера
-      }
-    } catch (e) {
-      print('Ошибка в потоке изменений сервера: $e');
     }
   }
 }

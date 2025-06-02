@@ -7,7 +7,7 @@ part of 'category_remote_data_providers.dart';
 // **************************************************************************
 
 String _$categoryRemoteDataSourceHash() =>
-    r'f44ca5112b8a15308992b8b7b80f0c045e47ada8';
+    r'9786969b2f454ccedb5aa170f4f566ea3adb21d3';
 
 /// Провайдер для Remote Data Source категорий
 ///

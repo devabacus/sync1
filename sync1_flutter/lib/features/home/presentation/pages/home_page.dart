@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../domain/providers/category/category_usecase_providers.dart'; // Импортируем use cases
 import '../providers/category/category_state_providers.dart';
 import '../../domain/entities/category/category.dart';
 
@@ -24,44 +25,87 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final categoriesAsyncValue = ref.watch(categoriesProvider);
+    // Теперь мы слушаем наш новый StreamProvider
+    final categoriesAsyncValue = ref.watch(categoriesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Категории'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: () {
-              ref.read(categoriesProvider.notifier).syncCategories().then((_){
-                 _showSnackBar('Синхронизация завершена');
-              }).catchError((error){
-                 _showSnackBar('Ошибка синхронизации: $error', isError: true);
-              });
-            },
-            tooltip: 'Синхронизировать',
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Форма добавления новой категории
             _buildAddCategoryForm(),
             const SizedBox(height: 20),
-            
-            // Список категорий
             Expanded(
               child: _buildCategoriesList(categoriesAsyncValue),
             ),
-            
           ],
         ),
       ),
     );
   }
+
+  void _addCategory() {
+    final title = _addCategoryController.text.trim();
+    if (title.isEmpty) {
+      _showSnackBar('Введите название категории', isError: true);
+      return;
+    }
+
+    final category = CategoryEntity(
+      id: const Uuid().v7(),
+      title: title,
+    );
+
+    // Вызываем use case напрямую. Notifier больше не нужен.
+    // UI обновится автоматически, так как use case изменит данные в БД,
+    // а StreamProvider это "услышит".
+    ref.read(createCategoryUseCaseProvider)(category).then((_) {
+      _addCategoryController.clear();
+      _showSnackBar('Категория добавлена');
+    }).catchError((error) {
+      _showSnackBar('Ошибка добавления: $error', isError: true);
+    });
+  }
+
+  void _updateCategory(CategoryEntity category) {
+    final newTitle = _editCategoryController.text.trim();
+    if (newTitle.isEmpty) {
+      _showSnackBar('Введите название категории', isError: true);
+      return;
+    }
+
+    if (newTitle == category.title) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final updatedCategory = category.copyWith(title: newTitle);
+    
+    // Вызываем use case напрямую
+    ref.read(updateCategoryUseCaseProvider)(updatedCategory).then((_) {
+      Navigator.of(context).pop();
+      _showSnackBar('Категория обновлена');
+    }).catchError((error) {
+      _showSnackBar('Ошибка обновления: $error', isError: true);
+    });
+  }
+
+  void _deleteCategory(CategoryEntity category) {
+    // Вызываем use case напрямую
+    ref.read(deleteCategoryUseCaseProvider)(category.id).then((_) {
+      Navigator.of(context).pop();
+      _showSnackBar('Категория удалена');
+    }).catchError((error) {
+      _showSnackBar('Ошибка удаления: $error', isError: true);
+    });
+  }
+  
+  // ----- Остальная часть файла HomePage остается без изменений -----
+  // ----- (методы _buildAddCategoryForm, _buildCategoriesList, и т.д.) -----
 
   Widget _buildAddCategoryForm() {
     return Card(
@@ -178,7 +222,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () => ref.refresh(categoriesProvider),
+              // Вместо refresh на старый провайдер, можно просто сделать retry
+              onPressed: () => ref.invalidate(categoriesStreamProvider),
               icon: const Icon(Icons.refresh),
               label: const Text('Попробовать снова'),
             ),
@@ -225,27 +270,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _addCategory() {
-    final title = _addCategoryController.text.trim();
-    if (title.isEmpty) {
-      _showSnackBar('Введите название категории', isError: true);
-      return;
-    }
-
-    // Генерируем UUID v7 прямо на клиенте для offline-first подхода
-    final category = CategoryEntity(
-      id: const Uuid().v7(), // Клиент генерирует окончательный ID
-      title: title,
-    );
-
-    ref.read(categoriesProvider.notifier).addCategory(category).then((_) {
-      _addCategoryController.clear();
-      _showSnackBar('Категория добавлена');
-    }).catchError((error) {
-      _showSnackBar('Ошибка добавления: $error', isError: true);
-    });
-  }
-
   void _showEditDialog(CategoryEntity category) {
     _editCategoryController.text = category.title;
     
@@ -275,28 +299,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _updateCategory(CategoryEntity category) {
-    final newTitle = _editCategoryController.text.trim();
-    if (newTitle.isEmpty) {
-      _showSnackBar('Введите название категории', isError: true);
-      return;
-    }
-
-    if (newTitle == category.title) {
-      Navigator.of(context).pop();
-      return;
-    }
-
-    final updatedCategory = category.copyWith(title: newTitle);
-    
-    ref.read(categoriesProvider.notifier).updateCategory(updatedCategory).then((_) {
-      Navigator.of(context).pop();
-      _showSnackBar('Категория обновлена');
-    }).catchError((error) {
-      _showSnackBar('Ошибка обновления: $error', isError: true);
-    });
-  }
-
   void _showDeleteDialog(CategoryEntity category) {
     showDialog(
       context: context,
@@ -319,15 +321,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
     );
-  }
-
-  void _deleteCategory(CategoryEntity category) {
-    ref.read(categoriesProvider.notifier).deleteCategory(category.id).then((_) {
-      Navigator.of(context).pop();
-      _showSnackBar('Категория удалена');
-    }).catchError((error) {
-      _showSnackBar('Ошибка удаления: $error', isError: true);
-    });
   }
 
   void _showSnackBar(String message, {bool isError = false}) {

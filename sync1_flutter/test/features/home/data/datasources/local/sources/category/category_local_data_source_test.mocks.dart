@@ -136,6 +136,14 @@ class MockCategoryDao extends _i1.Mock implements _i6.CategoryDao {
   }
 
   @override
+  _i2.AppDatabase get db =>
+      (super.noSuchMethod(
+            Invocation.getter(#db),
+            returnValue: _FakeAppDatabase_0(this, Invocation.getter(#db)),
+          )
+          as _i2.AppDatabase);
+
+  @override
   _i2.AppDatabase get attachedDatabase =>
       (super.noSuchMethod(
             Invocation.getter(#attachedDatabase),
@@ -295,6 +303,25 @@ class MockCategoryDao extends _i1.Mock implements _i6.CategoryDao {
   _i5.Future<int> getCategoriesCount() =>
       (super.noSuchMethod(
             Invocation.method(#getCategoriesCount, []),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<void> insertCategories(
+    List<_i2.CategoryTableCompanion>? companions,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#insertCategories, [companions]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<int> deleteAllCategories() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAllCategories, []),
             returnValue: _i5.Future<int>.value(0),
           )
           as _i5.Future<int>);

@@ -44,7 +44,7 @@ final categoryLocalDataSourceProvider =
 typedef CategoryLocalDataSourceRef =
     AutoDisposeProviderRef<ICategoryLocalDataSource>;
 String _$categoryRepositoryHash() =>
-    r'4941d192de0150c9b8144dc3090a895b5d98cecc';
+    r'93ef52303331804ebdf08ed91db992254f3f1e71';
 
 /// See also [categoryRepository].
 @ProviderFor(categoryRepository)

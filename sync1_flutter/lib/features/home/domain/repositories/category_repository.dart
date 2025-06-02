@@ -8,5 +8,5 @@ abstract class ICategoryRepository {
   Future<bool> updateCategory(CategoryEntity category);
   Future<bool> deleteCategory(String id);
   Future<void> syncWithServer(); // <-- Add this line
-
+  void dispose();
 }

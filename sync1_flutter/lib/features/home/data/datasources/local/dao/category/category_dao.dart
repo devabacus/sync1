@@ -12,6 +12,11 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   CategoryDao(IDatabaseService databaseService)
     : super(databaseService.database);
 
+
+   // Этот геттер нужен для транзакций в репозитории
+  AppDatabase get db => attachedDatabase;
+
+
   Future<List<CategoryTableData>> getCategories() =>
       select(categoryTable).get();
 
@@ -31,6 +36,9 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     }
 
     final id = companion.id.value;
+
+    
+
 
     try {
       final existingCategory =
@@ -102,5 +110,17 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
 
     final result = await countQuery.getSingle();
     return result.read(categoryTable.id.count()) ?? 0;
+  }
+
+    /// Вставляет список категорий в одной транзакции (батче).
+  Future<void> insertCategories(List<CategoryTableCompanion> companions) async {
+    await batch((batch) {
+      batch.insertAll(categoryTable, companions);
+    });
+  }
+
+  /// Удаляет все категории из таблицы.
+  Future<int> deleteAllCategories() {
+    return delete(categoryTable).go();
   }
 }

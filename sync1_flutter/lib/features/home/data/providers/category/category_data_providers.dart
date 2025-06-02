@@ -30,6 +30,12 @@ ICategoryRepository categoryRepository(Ref ref) {
   final localDataSource = ref.watch(categoryLocalDataSourceProvider);
   final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider); // <-- Новая зависимость
 
+   // Создаем репозиторий, который автоматически начнет слушать сервер
+  final repository = CategoryRepositoryImpl(localDataSource, remoteDataSource);
+
+  // Убедимся, что при уничтожении провайдера подписка будет закрыта
+  ref.onDispose(() => repository.dispose());
+
   // Передаем обе зависимости в конструктор
   return CategoryRepositoryImpl(localDataSource, remoteDataSource);
 }
