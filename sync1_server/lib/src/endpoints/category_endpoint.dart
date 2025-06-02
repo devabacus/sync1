@@ -1,20 +1,27 @@
 // sync1_server/lib/src/endpoints/category_endpoint.dart
-// Замените содержимое файла на это:
+// Простое и надёжное production решение
 
 import 'dart:async';
 import 'package:serverpod/serverpod.dart';
 import 'package:sync1_server/src/generated/protocol.dart';
 
 class CategoryEndpoint extends Endpoint {
-  // Глобальный broadcast stream для уведомлений
-  static final StreamController<void> _changeNotifier = 
-      StreamController<void>.broadcast();
+  // Broadcast stream для мгновенных уведомлений
+  static final StreamController<CategoryChangeEvent> _changeNotifier = 
+      StreamController<CategoryChangeEvent>.broadcast();
+
+  // Счетчик активных подключений для мониторинга
+  static int _activeConnections = 0;
 
   Future<Category> createCategory(Session session, Category category) async {
     await Category.db.insertRow(session, category);
     
-    // Уведомляем о изменении
-    _notifyChange(session, 'CREATE');
+    // Уведомляем о создании
+    _notifyChange(session, CategoryChangeEvent(
+      action: 'CREATE',
+      categoryId: category.id.toString(),
+      timestamp: DateTime.now(),
+    ));
     
     return category;
   }
@@ -34,11 +41,16 @@ class CategoryEndpoint extends Endpoint {
     try {
       await Category.db.updateRow(session, category);
       
-      // Уведомляем о изменении
-      _notifyChange(session, 'UPDATE');
+      // Уведомляем об обновлении
+      _notifyChange(session, CategoryChangeEvent(
+        action: 'UPDATE',
+        categoryId: category.id.toString(),
+        timestamp: DateTime.now(),
+      ));
       
       return true;
     } catch (e) {
+      session.log('❌ Ошибка обновления категории: $e');
       return false;
     }
   }
@@ -51,19 +63,25 @@ class CategoryEndpoint extends Endpoint {
       );
       
       if (result.isNotEmpty) {
-        // Уведомляем о изменении
-        _notifyChange(session, 'DELETE');
+        // Уведомляем об удалении
+        _notifyChange(session, CategoryChangeEvent(
+          action: 'DELETE',
+          categoryId: id.toString(),
+          timestamp: DateTime.now(),
+        ));
       }
       
       return result.isNotEmpty;
     } catch (e) {
+      session.log('❌ Ошибка удаления категории: $e');
       return false;
     }
   }
 
-  /// Эффективный real-time streaming без polling
+  /// Production-ready real-time streaming
   Stream<List<Category>> watchCategories(Session session) async* {
-    session.log('🟢 Клиент подключился к real-time категориям');
+    _activeConnections++;
+    session.log('🟢 Клиент подключился к real-time категориям (${_activeConnections} активных)');
     
     try {
       // 1. Отправляем текущий список сразу
@@ -72,12 +90,12 @@ class CategoryEndpoint extends Endpoint {
       session.log('📤 Отправлен начальный список: ${categories.length} категорий');
 
       // 2. Слушаем изменения через broadcast stream
-      await for (var _ in _changeNotifier.stream) {
+      await for (var changeEvent in _changeNotifier.stream) {
         try {
           // Получаем обновленные данные только при изменении
           var updatedCategories = await _getCurrentCategories(session);
           yield updatedCategories;
-          session.log('🔄 Отправлено обновление: ${updatedCategories.length} категорий');
+          session.log('🔄 Отправлено обновление ${changeEvent.action}: ${updatedCategories.length} категорий');
         } catch (e) {
           session.log('❌ Ошибка получения обновленных категорий: $e');
           // Не прерываем stream при ошибке
@@ -88,11 +106,12 @@ class CategoryEndpoint extends Endpoint {
       session.log('❌ Критическая ошибка в watchCategories: $e');
       rethrow;
     } finally {
-      session.log('🔴 Клиент отключился от real-time категорий');
+      _activeConnections--;
+      session.log('🔴 Клиент отключился от real-time категорий (${_activeConnections} активных)');
     }
   }
 
-  /// Получает текущий список категорий
+  /// Получает актуальный список категорий
   Future<List<Category>> _getCurrentCategories(Session session) async {
     return await Category.db.find(
       session,
@@ -101,21 +120,41 @@ class CategoryEndpoint extends Endpoint {
   }
 
   /// Уведомляет всех слушателей об изменении
-  static void _notifyChange(Session session, String operation) {
+  static void _notifyChange(Session session, CategoryChangeEvent event) {
     try {
       if (!_changeNotifier.isClosed) {
-        _changeNotifier.add(null);
-        session.log('🔔 Уведомление отправлено: $operation');
+        _changeNotifier.add(event);
+        session.log('🔔 Уведомление отправлено: ${event.action} для ID ${event.categoryId}');
       }
     } catch (e) {
       session.log('❌ Ошибка отправки уведомления: $e');
     }
   }
 
-  /// Очистка ресурсов при остановке сервера
+  /// Получить количество активных подключений (для мониторинга)
+  static int getActiveConnectionsCount() => _activeConnections;
+
+  /// Очистка ресурсов
   static void dispose() {
     if (!_changeNotifier.isClosed) {
       _changeNotifier.close();
     }
+    _activeConnections = 0;
   }
+}
+
+/// Событие изменения категории
+class CategoryChangeEvent {
+  final String action; // CREATE, UPDATE, DELETE
+  final String categoryId;
+  final DateTime timestamp;
+
+  CategoryChangeEvent({
+    required this.action,
+    required this.categoryId,
+    required this.timestamp,
+  });
+
+  @override
+  String toString() => 'CategoryChangeEvent($action, $categoryId, $timestamp)';
 }
