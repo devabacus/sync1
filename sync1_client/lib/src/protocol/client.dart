@@ -58,8 +58,7 @@ class EndpointCategory extends _i1.EndpointRef {
         {'id': id},
       );
 
-  /// Streaming method для real-time обновлений категорий
-  /// Отправляет текущий список категорий и все последующие изменения
+  /// Эффективный real-time streaming без polling
   _i2.Stream<List<_i3.Category>> watchCategories() =>
       caller.callStreamingServerEndpoint<_i2.Stream<List<_i3.Category>>,
           List<_i3.Category>>(

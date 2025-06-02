@@ -6,7 +6,7 @@ part of 'category_get_by_id_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$getCategoryByIdHash() => r'd6ddd9203390ffaa6ce948868f46548996e42b8f';
+String _$getCategoryByIdHash() => r'442821adcb55e4452b2139e520a8c110715225d9';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -34,7 +34,7 @@ class _SystemHash {
 const getCategoryByIdProvider = GetCategoryByIdFamily();
 
 /// See also [getCategoryById].
-class GetCategoryByIdFamily extends Family<AsyncValue<CategoryEntity>> {
+class GetCategoryByIdFamily extends Family<AsyncValue<CategoryEntity?>> {
   /// See also [getCategoryById].
   const GetCategoryByIdFamily();
 
@@ -67,7 +67,7 @@ class GetCategoryByIdFamily extends Family<AsyncValue<CategoryEntity>> {
 
 /// See also [getCategoryById].
 class GetCategoryByIdProvider
-    extends AutoDisposeFutureProvider<CategoryEntity> {
+    extends AutoDisposeFutureProvider<CategoryEntity?> {
   /// See also [getCategoryById].
   GetCategoryByIdProvider(String id)
     : this._internal(
@@ -98,7 +98,7 @@ class GetCategoryByIdProvider
 
   @override
   Override overrideWith(
-    FutureOr<CategoryEntity> Function(GetCategoryByIdRef provider) create,
+    FutureOr<CategoryEntity?> Function(GetCategoryByIdRef provider) create,
   ) {
     return ProviderOverride(
       origin: this,
@@ -115,7 +115,7 @@ class GetCategoryByIdProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<CategoryEntity> createElement() {
+  AutoDisposeFutureProviderElement<CategoryEntity?> createElement() {
     return _GetCategoryByIdProviderElement(this);
   }
 
@@ -135,13 +135,13 @@ class GetCategoryByIdProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin GetCategoryByIdRef on AutoDisposeFutureProviderRef<CategoryEntity> {
+mixin GetCategoryByIdRef on AutoDisposeFutureProviderRef<CategoryEntity?> {
   /// The parameter `id` of this provider.
   String get id;
 }
 
 class _GetCategoryByIdProviderElement
-    extends AutoDisposeFutureProviderElement<CategoryEntity>
+    extends AutoDisposeFutureProviderElement<CategoryEntity?>
     with GetCategoryByIdRef {
   _GetCategoryByIdProviderElement(super.provider);
 
