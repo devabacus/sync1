@@ -36,6 +36,25 @@ class Endpoints extends _i1.EndpointDispatch {
       name: 'category',
       endpoint: endpoints['category']!,
       methodConnectors: {
+        'getCategoriesSince': _i1.MethodConnector(
+          name: 'getCategoriesSince',
+          params: {
+            'since': _i1.ParameterDescription(
+              name: 'since',
+              type: _i1.getType<DateTime?>(),
+              nullable: true,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint)
+                  .getCategoriesSince(
+            session,
+            params['since'],
+          ),
+        ),
         'createCategory': _i1.MethodConnector(
           name: 'createCategory',
           params: {

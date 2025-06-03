@@ -100,71 +100,72 @@ Future<void> _processSingleCategoryUpdate(serverpod.Category serverCategory) asy
 }
 
   /// Вставляет новую категорию с сервера
-  Future<void> _insertServerCategory(serverpod.Category serverCategory) async {
-    final companion = CategoryTableCompanion.insert(
-      id: Value(serverCategory.id.toString()),
-      title: serverCategory.title,
-      lastModified: serverCategory.lastModified,
-      deleted: Value(serverCategory.deleted),
-      syncStatus: SyncStatus.synced, // Данные с сервера всегда синхронизированы
-    );
+Future<void> _insertServerCategory(serverpod.Category serverCategory) async {
+  final companion = CategoryTableCompanion.insert(
+    id: Value(serverCategory.id.toString()),
+    title: serverCategory.title,
+    // Используем текущее время, если сервер не передал lastModified
+    lastModified: serverCategory.lastModified ?? DateTime.now().toUtc(),
+    deleted: Value(serverCategory.deleted),
+    syncStatus: SyncStatus.synced,
+  );
 
-    await _categoryDao.db.into(_categoryDao.categoryTable).insert(companion);
-
-
-  }
+  await _categoryDao.db.into(_categoryDao.categoryTable).insert(companion);
+}
 
   /// Разрешает конфликт между локальной и серверной записью
-  Future<void> _resolveConflict(
-    CategoryTableData localCategory,
-    serverpod.Category serverCategory,
-  ) async {
-    final serverTime = serverCategory.lastModified;
-    final localTime = localCategory.lastModified;
+Future<void> _resolveConflict(
+  CategoryTableData localCategory,
+  serverpod.Category serverCategory,
+) async {
+  // Используем текущее время, если сервер не передал lastModified
+  final serverTime = serverCategory.lastModified ?? DateTime.now().toUtc();
+  final localTime = localCategory.lastModified;
 
-    // Стратегия разрешения конфликтов: "server wins" + учет локальных изменений
-    if (localCategory.syncStatus == SyncStatus.local) {
-      // Локальная запись была изменена и еще не синхронизирована
-      if (serverTime.isAfter(localTime)) {
-        // Сервер новее - принимаем серверную версию, но помечаем конфликт
-        await _updateToServerVersion(
-          localCategory.id,
-          serverCategory,
-          isConflict: true,
-        );
-        print('⚠️ Конфликт разрешен в пользу сервера: ${serverCategory.title}');
-      } else {
-        // Локальная версия новее или равна - оставляем локальную, но нужно будет синхронизировать
-        print('📝 Локальная версия новее, оставляем: ${localCategory.title}');
-        // Запланируем повторную отправку на сервер
-        _retryLocalSync(localCategory);
-      }
+  // Стратегия разрешения конфликтов: "server wins" + учет локальных изменений
+  if (localCategory.syncStatus == SyncStatus.local) {
+    // Локальная запись была изменена и еще не синхронизирована
+    if (serverTime.isAfter(localTime)) {
+      // Сервер новее - принимаем серверную версию, но помечаем конфликт
+      await _updateToServerVersion(
+        localCategory.id,
+        serverCategory,
+        isConflict: true,
+      );
+      print('⚠️ Конфликт разрешен в пользу сервера: ${serverCategory.title}');
     } else {
-      // Локальная запись синхронизирована - просто обновляем до серверной версии
-      if (serverTime.isAfter(localTime)) {
-        await _updateToServerVersion(localCategory.id, serverCategory);
-        print('🔄 Обновлено с сервера: ${serverCategory.title}');
-      }
-      // Если серверная версия старше или равна, ничего не делаем
+      // Локальная версия новее или равна - оставляем локальную, но нужно будет синхронизировать
+      print('📝 Локальная версия новее, оставляем: ${localCategory.title}');
+      // Запланируем повторную отправку на сервер
+      _retryLocalSync(localCategory);
     }
+  } else {
+    // Локальная запись синхронизирована - просто обновляем до серверной версии
+    if (serverTime.isAfter(localTime)) {
+      await _updateToServerVersion(localCategory.id, serverCategory);
+      print('🔄 Обновлено с сервера: ${serverCategory.title}');
+    }
+    // Если серверная версия старше или равна, ничего не делаем
   }
+}
 
   /// Обновляет локальную запись до серверной версии
-  Future<void> _updateToServerVersion(
-    String categoryId,
-    serverpod.Category serverCategory, {
-    bool isConflict = false,
-  }) async {
-    final companion = CategoryTableCompanion(
-      id: Value(categoryId),
-      title: Value(serverCategory.title),
-      lastModified: Value(serverCategory.lastModified),
-      deleted: Value(serverCategory.deleted),
-      syncStatus: Value(isConflict ? SyncStatus.conflict : SyncStatus.synced),
-    );
+Future<void> _updateToServerVersion(
+  String categoryId,
+  serverpod.Category serverCategory, {
+  bool isConflict = false,
+}) async {
+  final companion = CategoryTableCompanion(
+    id: Value(categoryId),
+    title: Value(serverCategory.title),
+    // Используем текущее время, если сервер не передал lastModified
+    lastModified: Value(serverCategory.lastModified ?? DateTime.now().toUtc()),
+    deleted: Value(serverCategory.deleted),
+    syncStatus: Value(isConflict ? SyncStatus.conflict : SyncStatus.synced),
+  );
 
-    await _categoryDao.updateCategory(companion);
-  }
+  await _categoryDao.updateCategory(companion);
+}
 
   /// Планирует повторную синхронизацию локальной записи
   Future<void> _retryLocalSync(CategoryTableData localCategory) async {

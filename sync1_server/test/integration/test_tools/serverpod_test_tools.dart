@@ -134,6 +134,35 @@ class _CategoryEndpoint {
 
   final _i2.SerializationManager _serializationManager;
 
+  _i3.Future<List<_i4.Category>> getCategoriesSince(
+    _i1.TestSessionBuilder sessionBuilder,
+    DateTime? since,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+        endpoint: 'category',
+        method: 'getCategoriesSince',
+      );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'category',
+          methodName: 'getCategoriesSince',
+          parameters: _i1.testObjectToJson({'since': since}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue = await (_localCallContext.method.call(
+          _localUniqueSession,
+          _localCallContext.arguments,
+        ) as _i3.Future<List<_i4.Category>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
   _i3.Future<_i4.Category> createCategory(
     _i1.TestSessionBuilder sessionBuilder,
     _i4.Category category,

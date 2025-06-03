@@ -3,5 +3,5 @@ table: category
 fields:
   id: UuidValue?, defaultPersist=random_v7
   title: String
-  lastModified: DateTime  # <-- Убрали автоматизацию
+  lastModified: DateTime?,
   deleted: bool, default=false

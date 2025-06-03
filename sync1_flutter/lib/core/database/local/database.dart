@@ -13,7 +13,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3; // Увеличиваем версию схемы
+  int get schemaVersion => 4; // Увеличиваем версию схемы
 
 @override
 MigrationStrategy get migration => MigrationStrategy(
@@ -32,6 +32,12 @@ MigrationStrategy get migration => MigrationStrategy(
           // Создаем новую таблицу SyncMetadata
           await m.createTable(syncMetadata);
         }
+
+        if (from < 4) {
+  // Пересоздаем таблицу с новой структурой
+  await m.deleteTable('category_table');
+  await m.createTable(categoryTable);
+}
       },
     );
 

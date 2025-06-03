@@ -23,6 +23,14 @@ class EndpointCategory extends _i1.EndpointRef {
   @override
   String get name => 'category';
 
+  /// Получает категории, измененные после указанного времени
+  _i2.Future<List<_i3.Category>> getCategoriesSince(DateTime? since) =>
+      caller.callServerEndpoint<List<_i3.Category>>(
+        'category',
+        'getCategoriesSince',
+        {'since': since},
+      );
+
   _i2.Future<_i3.Category> createCategory(_i3.Category category) =>
       caller.callServerEndpoint<_i3.Category>(
         'category',
