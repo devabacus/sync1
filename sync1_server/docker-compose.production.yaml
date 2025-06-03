@@ -45,6 +45,19 @@ services:
     networks:
       - serverpod-network
 
+  redis: 
+    restart: unless-stopped
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - serverpod-network
+
+
+
   serverpod:
     restart: unless-stopped
     image: ghcr.io/${GHCR_ORG}/sync1_server:latest
@@ -92,6 +105,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis: 
+        condition: service_started
     networks:
       - serverpod-network
 

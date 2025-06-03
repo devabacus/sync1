@@ -107,6 +107,8 @@ jobs:
           # The password for the database
           POSTGRES_PASSWORD: ${{ secrets.SERVERPOD_DATABASE_PASSWORD }}
           # The database name
+          REDIS_PASSWORD: ${{ secrets.REDIS_PRODUCTION_PASSWORD }}
+
           SERVERPOD_DATABASE_NAME: ${{ secrets.SERVERPOD_DATABASE_NAME }}
           # The user name for the database
           SERVERPOD_DATABASE_USER: ${{ secrets.SERVERPOD_DATABASE_USER }}
