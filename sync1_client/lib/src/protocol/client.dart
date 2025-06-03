@@ -58,7 +58,7 @@ class EndpointCategory extends _i1.EndpointRef {
         {'id': id},
       );
 
-  /// Эффективный real-time streaming без polling
+  /// Production-ready real-time streaming (синтаксис Serverpod 2.x)
   _i2.Stream<List<_i3.Category>> watchCategories() =>
       caller.callStreamingServerEndpoint<_i2.Stream<List<_i3.Category>>,
           List<_i3.Category>>(
