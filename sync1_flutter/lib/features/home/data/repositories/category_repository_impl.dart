@@ -1,5 +1,4 @@
-// lib/features/home/data/repositories/category_repository_impl.dart
-
+// G:/Projects/Flutter/serverpod/sync1/sync1_flutter/lib/features/home/data/repositories/category_repository_impl.dart
 import 'dart:async';
 
 import 'package:drift/drift.dart';
@@ -11,6 +10,7 @@ import '../../domain/entities/extensions/category_entity_extension.dart';
 import '../../domain/repositories/category_repository.dart';
 import '../datasources/local/interfaces/category_local_datasource_service.dart';
 import '../datasources/local/sources/category_local_data_source.dart';
+import '../datasources/local/tables/category_table.dart';
 import '../datasources/remote/interfaces/category_remote_datasource_service.dart';
 import '../models/extensions/category_model_extension.dart';
 
@@ -31,17 +31,14 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   void _initServerSync() {
     if (_serverStreamSubscription != null) return;
 
-    print('🟢 Инициализация автоматической синхронизации с сервером...');
     _serverStreamSubscription = _remoteDataSource.watchCategories().listen(
       (serverCategories) {
-        print('🔄 Получено обновление с сервера: ${serverCategories.length} категорий.');
         _performSync(serverCategories);
       },
       onError: (error) {
-        print('❌ Ошибка в потоке данных с сервера: $error');
+        // Здесь можно добавить более сложную обработку ошибок
       },
       onDone: () {
-        print('⚫️ Поток данных с сервера завершен.');
         _serverStreamSubscription = null;
       },
     );
@@ -62,6 +59,8 @@ class CategoryRepositoryImpl implements ICategoryRepository {
             CategoryTableCompanion.insert(
               id: Value(c.id.toString()),
               title: c.title,
+              lastModified: c.lastModified,
+              syncStatus: SyncStatus.synced, // Серверные данные всегда синхронизированы
             )
         ).toList();
 
@@ -69,10 +68,9 @@ class CategoryRepositoryImpl implements ICategoryRepository {
           await categoryDao.insertCategories(companions);
         }
       });
-      print('✅ Авто-синхронизация завершена. Локальная БД обновлена.');
 
     } catch (e) {
-      print('❌ Ошибка во время выполнения авто-синхронизации: $e');
+      // Обработка ошибок синхронизации
     }
   }
 
@@ -91,7 +89,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     
     // 2. Отправляем на сервер. Изменения придут обратно через stream.
     _syncCreateToServer(category).catchError((error) {
-      print('❌ Не удалось отправить создание на сервер: $error');
       // Здесь можно добавить логику обработки ошибок, например, откат локального создания
     });
     
@@ -103,7 +100,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
 
   @override
   void dispose() {
-    print('Disposing CategoryRepository и отмена подписки на сервер.');
     _serverStreamSubscription?.cancel();
     _serverStreamSubscription = null;
   }
@@ -116,7 +112,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final localCategories = await _localDataSource.getCategories();
       return localCategories.toEntities();
     } catch (e) {
-      print('Ошибка получения локальных категорий: $e');
       rethrow;
     }
   }
@@ -127,7 +122,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final model = await _localDataSource.getCategoryById(id);
       return model.toEntity();
     } catch (e) {
-      print('Ошибка получения категории по ID $id: $e');
       rethrow;
     }
   }
@@ -136,7 +130,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   Future<bool> updateCategory(CategoryEntity category) async {
     final localResult = await _localDataSource.updateCategory(category.toModel());
     _syncUpdateToServer(category).catchError((error) {
-      print('Ошибка синхронизации обновления на сервер: $error');
+      // Обработка ошибок
     });
     return localResult;
   }
@@ -145,7 +139,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   Future<bool> deleteCategory(String id) async {
     final localResult = await _localDataSource.deleteCategory(id);
     _syncDeleteToServer(id).catchError((error) {
-      print('Ошибка синхронизации удаления на сервер: $error');
+      // Обработка ошибок
     });
     return localResult;
   }
@@ -155,10 +149,10 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final serverpodCategory = serverpod.Category(
         id: serverpod.UuidValue.fromString(category.id),
         title: category.title,
+        lastModified: category.lastModified,
       );
       await _remoteDataSource.createCategory(serverpodCategory);
     } catch (e) {
-      print('Не удалось создать категорию на сервере: $e');
       rethrow;
     }
   }
@@ -168,10 +162,10 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final serverpodCategory = serverpod.Category(
         id: serverpod.UuidValue.fromString(category.id),
         title: category.title,
+        lastModified: category.lastModified,
       );
       await _remoteDataSource.updateCategory(serverpodCategory);
     } catch (e) {
-      print('Не удалось обновить категорию на сервере: $e');
       rethrow;
     }
   }
@@ -181,7 +175,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final uuidValue = serverpod.UuidValue.fromString(id);
       await _remoteDataSource.deleteCategory(uuidValue);
     } catch (e) {
-      print('Не удалось удалить категорию на сервере: $e');
       rethrow;
     }
   }
@@ -189,12 +182,9 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   @override
   Future<void> syncWithServer() async {
     try {
-      print('Начинаем РУЧНУЮ синхронизацию с сервером...');
       final serverCategories = await _remoteDataSource.getCategories();
       await _performSync(serverCategories);
-      print('Ручная синхронизация завершена.');
     } catch (e) {
-      print('Ошибка ручной синхронизации с сервером: $e');
       rethrow;
     }
   }
