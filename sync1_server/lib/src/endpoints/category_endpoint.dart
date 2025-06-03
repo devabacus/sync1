@@ -1,28 +1,29 @@
-// sync1_server/lib/src/endpoints/category_endpoint.dart
-// Простое и надёжное production решение
-
-import 'dart:async';
 import 'package:serverpod/serverpod.dart';
 import 'package:sync1_server/src/generated/protocol.dart';
 
-class CategoryEndpoint extends Endpoint {
-  // Broadcast stream для мгновенных уведомлений
-  static final StreamController<CategoryChangeEvent> _changeNotifier = 
-      StreamController<CategoryChangeEvent>.broadcast();
+// Уникальное имя канала для сообщений о категориях
+const _categoryChannel = 'sync1_category_updates';
 
-  // Счетчик активных подключений для мониторинга
-  static int _activeConnections = 0;
+class CategoryEndpoint extends Endpoint {
+  
+  /// Отправляет уведомление всем подписчикам канала.
+  Future<void> _notifyChange(Session session, String changeType) async {
+    final message = Greeting(
+      message: changeType,
+      author: 'Server.CategoryEndpoint',
+      timestamp: DateTime.now(),
+    );
+    
+    await session.messages.postMessage(
+      _categoryChannel, 
+      message,
+    );
+    session.log('🔔 Уведомление отправлено в канал "$_categoryChannel": $changeType');
+  }
 
   Future<Category> createCategory(Session session, Category category) async {
     await Category.db.insertRow(session, category);
-    
-    // Уведомляем о создании
-    _notifyChange(session, CategoryChangeEvent(
-      action: 'CREATE',
-      categoryId: category.id.toString(),
-      timestamp: DateTime.now(),
-    ));
-    
+    await _notifyChange(session, 'CREATE');
     return category;
   }
 
@@ -40,14 +41,7 @@ class CategoryEndpoint extends Endpoint {
   Future<bool> updateCategory(Session session, Category category) async {
     try {
       await Category.db.updateRow(session, category);
-      
-      // Уведомляем об обновлении
-      _notifyChange(session, CategoryChangeEvent(
-        action: 'UPDATE',
-        categoryId: category.id.toString(),
-        timestamp: DateTime.now(),
-      ));
-      
+      await _notifyChange(session, 'UPDATE');
       return true;
     } catch (e) {
       session.log('❌ Ошибка обновления категории: $e');
@@ -63,12 +57,7 @@ class CategoryEndpoint extends Endpoint {
       );
       
       if (result.isNotEmpty) {
-        // Уведомляем об удалении
-        _notifyChange(session, CategoryChangeEvent(
-          action: 'DELETE',
-          categoryId: id.toString(),
-          timestamp: DateTime.now(),
-        ));
+        await _notifyChange(session, 'DELETE');
       }
       
       return result.isNotEmpty;
@@ -78,83 +67,22 @@ class CategoryEndpoint extends Endpoint {
     }
   }
 
-  /// Production-ready real-time streaming
+  /// Production-ready real-time streaming (синтаксис Serverpod 2.x)
   Stream<List<Category>> watchCategories(Session session) async* {
-    _activeConnections++;
-    session.log('🟢 Клиент подключился к real-time категориям (${_activeConnections} активных)');
+    session.log('🟢 Клиент подписался на канал "$_categoryChannel"');
     
     try {
-      // 1. Отправляем текущий список сразу
-      var categories = await _getCurrentCategories(session);
-      yield categories;
-      session.log('📤 Отправлен начальный список: ${categories.length} категорий');
-
-      // 2. Слушаем изменения через broadcast stream
-      await for (var changeEvent in _changeNotifier.stream) {
-        try {
-          // Получаем обновленные данные только при изменении
-          var updatedCategories = await _getCurrentCategories(session);
-          yield updatedCategories;
-          session.log('🔄 Отправлено обновление ${changeEvent.action}: ${updatedCategories.length} категорий');
-        } catch (e) {
-          session.log('❌ Ошибка получения обновленных категорий: $e');
-          // Не прерываем stream при ошибке
-        }
-      }
+      // 1. Сразу отправляем текущий список.
+      yield await getCategories(session);
       
-    } catch (e) {
-      session.log('❌ Критическая ошибка в watchCategories: $e');
-      rethrow;
-    } finally {
-      _activeConnections--;
-      session.log('🔴 Клиент отключился от real-time категорий (${_activeConnections} активных)');
-    }
-  }
-
-  /// Получает актуальный список категорий
-  Future<List<Category>> _getCurrentCategories(Session session) async {
-    return await Category.db.find(
-      session,
-      orderBy: (c) => c.title,
-    );
-  }
-
-  /// Уведомляет всех слушателей об изменении
-  static void _notifyChange(Session session, CategoryChangeEvent event) {
-    try {
-      if (!_changeNotifier.isClosed) {
-        _changeNotifier.add(event);
-        session.log('🔔 Уведомление отправлено: ${event.action} для ID ${event.categoryId}');
+      await for (var _ in session.messages.createStream(_categoryChannel)) {
+        session.log('🔄 Получено сообщение-триггер из Redis, отправляем обновленный список.');
+        
+        // При получении любого сообщения, просто заново запрашиваем и отдаем полный список.
+        yield await getCategories(session);
       }
-    } catch (e) {
-      session.log('❌ Ошибка отправки уведомления: $e');
+    } finally {
+      session.log('🔴 Клиент отписался от канала "$_categoryChannel"');
     }
   }
-
-  /// Получить количество активных подключений (для мониторинга)
-  static int getActiveConnectionsCount() => _activeConnections;
-
-  /// Очистка ресурсов
-  static void dispose() {
-    if (!_changeNotifier.isClosed) {
-      _changeNotifier.close();
-    }
-    _activeConnections = 0;
-  }
-}
-
-/// Событие изменения категории
-class CategoryChangeEvent {
-  final String action; // CREATE, UPDATE, DELETE
-  final String categoryId;
-  final DateTime timestamp;
-
-  CategoryChangeEvent({
-    required this.action,
-    required this.categoryId,
-    required this.timestamp,
-  });
-
-  @override
-  String toString() => 'CategoryChangeEvent($action, $categoryId, $timestamp)';
 }
