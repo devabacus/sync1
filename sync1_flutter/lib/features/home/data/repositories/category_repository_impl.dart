@@ -80,16 +80,22 @@ class CategoryRepositoryImpl implements ICategoryRepository {
 Future<void> _processSingleCategoryUpdate(serverpod.Category serverCategory) async {
   final categoryId = serverCategory.id.toString();
   
-  // Получаем текущую локальную запись (если есть) - используем метод DAO
+  // Получаем текущую локальную запись (если есть)
   CategoryTableData? localCategory;
   try {
     localCategory = await _categoryDao.getCategoryById(categoryId);
   } catch (e) {
-    // Если запись не найдена, getCategoryById выбросит исключение
     localCategory = null;
   }
 
-  if (localCategory == null) {
+  if (serverCategory.deleted) {
+    // ✅ Обрабатываем удаление с сервера
+    if (localCategory != null) {
+      await _markCategoryAsDeleted(categoryId);
+      print('🗑️ Категория удалена с сервера: ${serverCategory.title}');
+    }
+    // Если локальной записи нет, ничего не делаем
+  } else if (localCategory == null) {
     // Новая запись с сервера - просто добавляем
     await _insertServerCategory(serverCategory);
     print('➕ Добавлена новая категория: ${serverCategory.title}');
@@ -97,6 +103,18 @@ Future<void> _processSingleCategoryUpdate(serverpod.Category serverCategory) asy
     // Существующая запись - нужно решить конфликт
     await _resolveConflict(localCategory, serverCategory);
   }
+}
+
+/// Помечает локальную запись как удаленную (синхронизированное удаление)
+Future<void> _markCategoryAsDeleted(String categoryId) async {
+  final companion = CategoryTableCompanion(
+    id: Value(categoryId),
+    deleted: const Value(true),
+    lastModified: Value(DateTime.now().toUtc()),
+    syncStatus: const Value(SyncStatus.synced), // Удаление пришло с сервера
+  );
+  
+  await _categoryDao.updateCategory(companion);
 }
 
   /// Вставляет новую категорию с сервера
