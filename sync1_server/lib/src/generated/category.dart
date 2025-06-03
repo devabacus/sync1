@@ -16,11 +16,15 @@ abstract class Category
   Category._({
     this.id,
     required this.title,
-  });
+    required this.lastModified,
+    bool? deleted,
+  }) : deleted = deleted ?? false;
 
   factory Category({
     _i1.UuidValue? id,
     required String title,
+    required DateTime lastModified,
+    bool? deleted,
   }) = _CategoryImpl;
 
   factory Category.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -29,6 +33,9 @@ abstract class Category
           ? null
           : _i1.UuidValueJsonExtension.fromJson(jsonSerialization['id']),
       title: jsonSerialization['title'] as String,
+      lastModified:
+          _i1.DateTimeJsonExtension.fromJson(jsonSerialization['lastModified']),
+      deleted: jsonSerialization['deleted'] as bool,
     );
   }
 
@@ -41,6 +48,10 @@ abstract class Category
 
   String title;
 
+  DateTime lastModified;
+
+  bool deleted;
+
   @override
   _i1.Table<_i1.UuidValue?> get table => t;
 
@@ -50,12 +61,16 @@ abstract class Category
   Category copyWith({
     _i1.UuidValue? id,
     String? title,
+    DateTime? lastModified,
+    bool? deleted,
   });
   @override
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id?.toJson(),
       'title': title,
+      'lastModified': lastModified.toJson(),
+      'deleted': deleted,
     };
   }
 
@@ -64,6 +79,8 @@ abstract class Category
     return {
       if (id != null) 'id': id?.toJson(),
       'title': title,
+      'lastModified': lastModified.toJson(),
+      'deleted': deleted,
     };
   }
 
@@ -103,9 +120,13 @@ class _CategoryImpl extends Category {
   _CategoryImpl({
     _i1.UuidValue? id,
     required String title,
+    required DateTime lastModified,
+    bool? deleted,
   }) : super._(
           id: id,
           title: title,
+          lastModified: lastModified,
+          deleted: deleted,
         );
 
   /// Returns a shallow copy of this [Category]
@@ -115,10 +136,14 @@ class _CategoryImpl extends Category {
   Category copyWith({
     Object? id = _Undefined,
     String? title,
+    DateTime? lastModified,
+    bool? deleted,
   }) {
     return Category(
       id: id is _i1.UuidValue? ? id : this.id,
       title: title ?? this.title,
+      lastModified: lastModified ?? this.lastModified,
+      deleted: deleted ?? this.deleted,
     );
   }
 }
@@ -129,14 +154,29 @@ class CategoryTable extends _i1.Table<_i1.UuidValue?> {
       'title',
       this,
     );
+    lastModified = _i1.ColumnDateTime(
+      'lastModified',
+      this,
+    );
+    deleted = _i1.ColumnBool(
+      'deleted',
+      this,
+      hasDefault: true,
+    );
   }
 
   late final _i1.ColumnString title;
+
+  late final _i1.ColumnDateTime lastModified;
+
+  late final _i1.ColumnBool deleted;
 
   @override
   List<_i1.Column> get columns => [
         id,
         title,
+        lastModified,
+        deleted,
       ];
 }
 

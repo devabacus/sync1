@@ -4,27 +4,21 @@ import '../../../domain/entities/category/category.dart';
 import '../category/category_model.dart';
 
 extension CategoryModelExtension on CategoryModel {
-  CategoryEntity toEntity() => CategoryEntity(id: id, title: title);
+  CategoryEntity toEntity() => CategoryEntity(
+        id: id,
+        title: title,
+        lastModified: lastModified, // <-- Добавили
+      );
 
-  /// Создает CategoryTableCompanion с ID для операций создания
-  /// Теперь всегда включает ID, так как он генерируется на клиенте
   CategoryTableCompanion toCompanion() => CategoryTableCompanion(
-    id: Value(id),
-    title: Value(title),
-  );
-
-  /// Создает CategoryTableCompanion с ID для операций обновления
-  /// Метод оставлен для совместимости, но теперь идентичен toCompanion()
-  CategoryTableCompanion toCompanionWithId() => CategoryTableCompanion(
-    id: Value(id),
-    title: Value(title),
-  );
-
-  /// Создает CategoryTableCompanion только с title (без ID)
-  /// Полезно в редких случаях, когда ID не нужен
-  CategoryTableCompanion toCompanionWithoutId() => CategoryTableCompanion.insert(
-    title: title,
-  );
+        id: Value(id),
+        title: Value(title),
+        lastModified: Value(lastModified), // <-- Добавили
+        // syncStatus и deleted будут установлены в репозитории
+      );
+  
+  // Этот метод можно будет удалить, но пока оставим для совместимости
+  CategoryTableCompanion toCompanionWithId() => toCompanion();
 }
 
 extension CategoryModelListExtension on List<CategoryModel> {

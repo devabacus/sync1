@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CategoryEntity {
 
- String get id; String get title;
+ String get id; String get title; DateTime get lastModified;
 /// Create a copy of CategoryEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $CategoryEntityCopyWith<CategoryEntity> get copyWith => _$CategoryEntityCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CategoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.lastModified, lastModified) || other.lastModified == lastModified));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title);
+int get hashCode => Object.hash(runtimeType,id,title,lastModified);
 
 @override
 String toString() {
-  return 'CategoryEntity(id: $id, title: $title)';
+  return 'CategoryEntity(id: $id, title: $title, lastModified: $lastModified)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $CategoryEntityCopyWith<$Res>  {
   factory $CategoryEntityCopyWith(CategoryEntity value, $Res Function(CategoryEntity) _then) = _$CategoryEntityCopyWithImpl;
 @useResult
 $Res call({
- String id, String title
+ String id, String title, DateTime lastModified
 });
 
 
@@ -66,11 +66,12 @@ class _$CategoryEntityCopyWithImpl<$Res>
 
 /// Create a copy of CategoryEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? lastModified = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,
+as String,lastModified: null == lastModified ? _self.lastModified : lastModified // ignore: cast_nullable_to_non_nullable
+as DateTime,
   ));
 }
 
@@ -81,11 +82,12 @@ as String,
 @JsonSerializable()
 
 class _CategoryEntity implements CategoryEntity {
-  const _CategoryEntity({required this.id, required this.title});
+  const _CategoryEntity({required this.id, required this.title, required this.lastModified});
   factory _CategoryEntity.fromJson(Map<String, dynamic> json) => _$CategoryEntityFromJson(json);
 
 @override final  String id;
 @override final  String title;
+@override final  DateTime lastModified;
 
 /// Create a copy of CategoryEntity
 /// with the given fields replaced by the non-null parameter values.
@@ -100,16 +102,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CategoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.lastModified, lastModified) || other.lastModified == lastModified));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title);
+int get hashCode => Object.hash(runtimeType,id,title,lastModified);
 
 @override
 String toString() {
-  return 'CategoryEntity(id: $id, title: $title)';
+  return 'CategoryEntity(id: $id, title: $title, lastModified: $lastModified)';
 }
 
 
@@ -120,7 +122,7 @@ abstract mixin class _$CategoryEntityCopyWith<$Res> implements $CategoryEntityCo
   factory _$CategoryEntityCopyWith(_CategoryEntity value, $Res Function(_CategoryEntity) _then) = __$CategoryEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title
+ String id, String title, DateTime lastModified
 });
 
 
@@ -137,11 +139,12 @@ class __$CategoryEntityCopyWithImpl<$Res>
 
 /// Create a copy of CategoryEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? lastModified = null,}) {
   return _then(_CategoryEntity(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,
+as String,lastModified: null == lastModified ? _self.lastModified : lastModified // ignore: cast_nullable_to_non_nullable
+as DateTime,
   ));
 }
 

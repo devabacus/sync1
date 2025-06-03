@@ -28,8 +28,49 @@ class $CategoryTableTable extends CategoryTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _lastModifiedMeta = const VerificationMeta(
+    'lastModified',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, title];
+  late final GeneratedColumn<DateTime> lastModified = GeneratedColumn<DateTime>(
+    'last_modified',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<SyncStatus, String> syncStatus =
+      GeneratedColumn<String>(
+        'sync_status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<SyncStatus>($CategoryTableTable.$convertersyncStatus);
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    lastModified,
+    deleted,
+    syncStatus,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -53,6 +94,23 @@ class $CategoryTableTable extends CategoryTable
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
+    if (data.containsKey('last_modified')) {
+      context.handle(
+        _lastModifiedMeta,
+        lastModified.isAcceptableOrUnknown(
+          data['last_modified']!,
+          _lastModifiedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastModifiedMeta);
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
     return context;
   }
 
@@ -72,6 +130,22 @@ class $CategoryTableTable extends CategoryTable
             DriftSqlType.string,
             data['${effectivePrefix}title'],
           )!,
+      lastModified:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}last_modified'],
+          )!,
+      deleted:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}deleted'],
+          )!,
+      syncStatus: $CategoryTableTable.$convertersyncStatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}sync_status'],
+        )!,
+      ),
     );
   }
 
@@ -79,23 +153,48 @@ class $CategoryTableTable extends CategoryTable
   $CategoryTableTable createAlias(String alias) {
     return $CategoryTableTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<SyncStatus, String> $convertersyncStatus =
+      const SyncStatusConverter();
 }
 
 class CategoryTableData extends DataClass
     implements Insertable<CategoryTableData> {
   final String id;
   final String title;
-  const CategoryTableData({required this.id, required this.title});
+  final DateTime lastModified;
+  final bool deleted;
+  final SyncStatus syncStatus;
+  const CategoryTableData({
+    required this.id,
+    required this.title,
+    required this.lastModified,
+    required this.deleted,
+    required this.syncStatus,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['title'] = Variable<String>(title);
+    map['last_modified'] = Variable<DateTime>(lastModified);
+    map['deleted'] = Variable<bool>(deleted);
+    {
+      map['sync_status'] = Variable<String>(
+        $CategoryTableTable.$convertersyncStatus.toSql(syncStatus),
+      );
+    }
     return map;
   }
 
   CategoryTableCompanion toCompanion(bool nullToAbsent) {
-    return CategoryTableCompanion(id: Value(id), title: Value(title));
+    return CategoryTableCompanion(
+      id: Value(id),
+      title: Value(title),
+      lastModified: Value(lastModified),
+      deleted: Value(deleted),
+      syncStatus: Value(syncStatus),
+    );
   }
 
   factory CategoryTableData.fromJson(
@@ -106,6 +205,9 @@ class CategoryTableData extends DataClass
     return CategoryTableData(
       id: serializer.fromJson<String>(json['id']),
       title: serializer.fromJson<String>(json['title']),
+      lastModified: serializer.fromJson<DateTime>(json['lastModified']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      syncStatus: serializer.fromJson<SyncStatus>(json['syncStatus']),
     );
   }
   @override
@@ -114,15 +216,36 @@ class CategoryTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'title': serializer.toJson<String>(title),
+      'lastModified': serializer.toJson<DateTime>(lastModified),
+      'deleted': serializer.toJson<bool>(deleted),
+      'syncStatus': serializer.toJson<SyncStatus>(syncStatus),
     };
   }
 
-  CategoryTableData copyWith({String? id, String? title}) =>
-      CategoryTableData(id: id ?? this.id, title: title ?? this.title);
+  CategoryTableData copyWith({
+    String? id,
+    String? title,
+    DateTime? lastModified,
+    bool? deleted,
+    SyncStatus? syncStatus,
+  }) => CategoryTableData(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    lastModified: lastModified ?? this.lastModified,
+    deleted: deleted ?? this.deleted,
+    syncStatus: syncStatus ?? this.syncStatus,
+  );
   CategoryTableData copyWithCompanion(CategoryTableCompanion data) {
     return CategoryTableData(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
+      lastModified:
+          data.lastModified.present
+              ? data.lastModified.value
+              : this.lastModified,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
     );
   }
 
@@ -130,43 +253,66 @@ class CategoryTableData extends DataClass
   String toString() {
     return (StringBuffer('CategoryTableData(')
           ..write('id: $id, ')
-          ..write('title: $title')
+          ..write('title: $title, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('deleted: $deleted, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, title);
+  int get hashCode => Object.hash(id, title, lastModified, deleted, syncStatus);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CategoryTableData &&
           other.id == this.id &&
-          other.title == this.title);
+          other.title == this.title &&
+          other.lastModified == this.lastModified &&
+          other.deleted == this.deleted &&
+          other.syncStatus == this.syncStatus);
 }
 
 class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   final Value<String> id;
   final Value<String> title;
+  final Value<DateTime> lastModified;
+  final Value<bool> deleted;
+  final Value<SyncStatus> syncStatus;
   final Value<int> rowid;
   const CategoryTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CategoryTableCompanion.insert({
     this.id = const Value.absent(),
     required String title,
+    required DateTime lastModified,
+    this.deleted = const Value.absent(),
+    required SyncStatus syncStatus,
     this.rowid = const Value.absent(),
-  }) : title = Value(title);
+  }) : title = Value(title),
+       lastModified = Value(lastModified),
+       syncStatus = Value(syncStatus);
   static Insertable<CategoryTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
+    Expression<DateTime>? lastModified,
+    Expression<bool>? deleted,
+    Expression<String>? syncStatus,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (title != null) 'title': title,
+      if (lastModified != null) 'last_modified': lastModified,
+      if (deleted != null) 'deleted': deleted,
+      if (syncStatus != null) 'sync_status': syncStatus,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -174,11 +320,17 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   CategoryTableCompanion copyWith({
     Value<String>? id,
     Value<String>? title,
+    Value<DateTime>? lastModified,
+    Value<bool>? deleted,
+    Value<SyncStatus>? syncStatus,
     Value<int>? rowid,
   }) {
     return CategoryTableCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
+      lastModified: lastModified ?? this.lastModified,
+      deleted: deleted ?? this.deleted,
+      syncStatus: syncStatus ?? this.syncStatus,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -192,6 +344,17 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
+    if (lastModified.present) {
+      map['last_modified'] = Variable<DateTime>(lastModified.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(
+        $CategoryTableTable.$convertersyncStatus.toSql(syncStatus.value),
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -203,6 +366,9 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     return (StringBuffer('CategoryTableCompanion(')
           ..write('id: $id, ')
           ..write('title: $title, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('deleted: $deleted, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -224,12 +390,18 @@ typedef $$CategoryTableTableCreateCompanionBuilder =
     CategoryTableCompanion Function({
       Value<String> id,
       required String title,
+      required DateTime lastModified,
+      Value<bool> deleted,
+      required SyncStatus syncStatus,
       Value<int> rowid,
     });
 typedef $$CategoryTableTableUpdateCompanionBuilder =
     CategoryTableCompanion Function({
       Value<String> id,
       Value<String> title,
+      Value<DateTime> lastModified,
+      Value<bool> deleted,
+      Value<SyncStatus> syncStatus,
       Value<int> rowid,
     });
 
@@ -251,6 +423,22 @@ class $$CategoryTableTableFilterComposer
     column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<SyncStatus, SyncStatus, String>
+  get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 }
 
 class $$CategoryTableTableOrderingComposer
@@ -271,6 +459,21 @@ class $$CategoryTableTableOrderingComposer
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoryTableTableAnnotationComposer
@@ -287,6 +490,20 @@ class $$CategoryTableTableAnnotationComposer
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<SyncStatus, String> get syncStatus =>
+      $composableBuilder(
+        column: $table.syncStatus,
+        builder: (column) => column,
+      );
 }
 
 class $$CategoryTableTableTableManager
@@ -330,16 +547,32 @@ class $$CategoryTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> title = const Value.absent(),
+                Value<DateTime> lastModified = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<SyncStatus> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => CategoryTableCompanion(id: id, title: title, rowid: rowid),
+              }) => CategoryTableCompanion(
+                id: id,
+                title: title,
+                lastModified: lastModified,
+                deleted: deleted,
+                syncStatus: syncStatus,
+                rowid: rowid,
+              ),
           createCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 required String title,
+                required DateTime lastModified,
+                Value<bool> deleted = const Value.absent(),
+                required SyncStatus syncStatus,
                 Value<int> rowid = const Value.absent(),
               }) => CategoryTableCompanion.insert(
                 id: id,
                 title: title,
+                lastModified: lastModified,
+                deleted: deleted,
+                syncStatus: syncStatus,
                 rowid: rowid,
               ),
           withReferenceMapper:

@@ -9,6 +9,7 @@ abstract class CategoryEntity with _$CategoryEntity {
   const factory CategoryEntity({
     required String id,
 required String title,
+required DateTime lastModified,
   }) = _CategoryEntity;
 
   factory CategoryEntity.fromJson(Map<String, dynamic> json) => _$CategoryEntityFromJson(json);

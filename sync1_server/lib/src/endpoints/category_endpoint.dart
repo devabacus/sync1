@@ -21,10 +21,14 @@ class CategoryEndpoint extends Endpoint {
     session.log('🔔 Уведомление отправлено в канал "$_categoryChannel": $changeType');
   }
 
-  Future<Category> createCategory(Session session, Category category) async {
-    await Category.db.insertRow(session, category);
+   Future<Category> createCategory(Session session, Category category) async {
+    // Создаем копию объекта, но с серверным временем
+    final serverCategory = category.copyWith(
+      lastModified: DateTime.now().toUtc(),
+    );
+    await Category.db.insertRow(session, serverCategory);
     await _notifyChange(session, 'CREATE');
-    return category;
+    return serverCategory;
   }
 
   Future<Category?> getCategoryById(Session session, UuidValue id) async {
@@ -38,9 +42,13 @@ class CategoryEndpoint extends Endpoint {
     );
   }
 
-  Future<bool> updateCategory(Session session, Category category) async {
+   Future<bool> updateCategory(Session session, Category category) async {
     try {
-      await Category.db.updateRow(session, category);
+      // Точно так же перезаписываем время при обновлении
+      final serverCategory = category.copyWith(
+        lastModified: DateTime.now().toUtc(),
+      );
+      await Category.db.updateRow(session, serverCategory);
       await _notifyChange(session, 'UPDATE');
       return true;
     } catch (e) {
@@ -48,6 +56,7 @@ class CategoryEndpoint extends Endpoint {
       return false;
     }
   }
+
 
   Future<bool> deleteCategory(Session session, UuidValue id) async {
     try {

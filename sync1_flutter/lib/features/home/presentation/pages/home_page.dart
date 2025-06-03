@@ -58,6 +58,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final category = CategoryEntity(
       id: const Uuid().v7(),
       title: title,
+      lastModified: DateTime.now().toUtc(), // <-- Добавили клиентское время
     );
 
     // Вызываем use case напрямую. Notifier больше не нужен.
@@ -72,6 +73,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _updateCategory(CategoryEntity category) {
+    
     final newTitle = _editCategoryController.text.trim();
     if (newTitle.isEmpty) {
       _showSnackBar('Введите название категории', isError: true);
@@ -83,7 +85,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
 
-    final updatedCategory = category.copyWith(title: newTitle);
+    final updatedCategory = category.copyWith(
+      title: newTitle,
+      lastModified: DateTime.now().toUtc(), // <-- Добавили клиентское время
+    );
     
     // Вызываем use case напрямую
     ref.read(updateCategoryUseCaseProvider)(updatedCategory).then((_) {

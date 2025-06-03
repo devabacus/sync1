@@ -18,7 +18,7 @@ Future<CategoryEntity?> getCategoryById(Ref ref, String id) async {
   if (categoriesAsyncValue.hasValue) {
     final category = categoriesAsyncValue.value?.firstWhere(
       (cat) => cat.id == id,
-      orElse: () => const CategoryEntity(id: 'NOT_FOUND', title: ''), // Временный объект, если не найдено
+      orElse: () => CategoryEntity(id: 'NOT_FOUND', title: '', lastModified: DateTime.now()), // Временный объект, если не найдено
     );
     // Если нашли реальный объект, возвращаем его
     if (category != null && category.id != 'NOT_FOUND') {
