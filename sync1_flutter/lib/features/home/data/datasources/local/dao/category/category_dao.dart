@@ -17,11 +17,12 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   AppDatabase get db => attachedDatabase;
 
 
-  Future<List<CategoryTableData>> getCategories() =>
-      select(categoryTable).get();
+// В category_dao.dart
+Future<List<CategoryTableData>> getCategories() =>
+    (select(categoryTable)..where((t) => t.deleted.equals(false))).get();
 
-  Stream<List<CategoryTableData>> watchCategories() =>
-      select(categoryTable).watch();
+Stream<List<CategoryTableData>> watchCategories() =>
+    (select(categoryTable)..where((t) => t.deleted.equals(false))).watch();
 
   Future<CategoryTableData> getCategoryById(String id) =>
       (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();

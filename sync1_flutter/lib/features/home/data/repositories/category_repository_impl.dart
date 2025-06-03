@@ -234,25 +234,34 @@ Future<void> _updateToServerVersion(
   }
 
   @override
-  Future<bool> deleteCategory(String id) async {
-    // "Мягкое удаление": помечаем запись как удаленную и ставим статус 'local'
+Future<bool> deleteCategory(String id) async {
+  try {
+    // 1. Получаем существующую запись
+    final existingCategory = await _categoryDao.getCategoryById(id);
+    
+    // 2. "Мягкое удаление": помечаем запись как удаленную и ставим статус 'local'
     final companion = CategoryTableCompanion(
       id: Value(id),
-      deleted: const Value(true),
+      title: Value(existingCategory.title), // Сохраняем существующий title
       lastModified: Value(DateTime.now().toUtc()),
+      deleted: const Value(true),
       syncStatus: const Value(SyncStatus.local),
     );
-
-    // Используем update для установки флагов
+    
+    // 3. Используем update для установки флагов
     final result = await _categoryDao.updateCategory(companion);
 
-    // Пытаемся синхронизировать удаление с сервером
+    // 4. Пытаемся синхронизировать удаление с сервером
     _syncDeleteToServer(id).catchError((error) {
-      print('❌ Ошибка синхронизации удаления: $error');
+       print('❌ Ошибка синхронизации удаления: $error');
     });
 
     return result;
+  } catch (e) {
+    print('❌ Ошибка при удалении категории: $e');
+    return false;
   }
+}
 
   @override
   Future<void> syncWithServer() async {
