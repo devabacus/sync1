@@ -44,7 +44,7 @@ final categoryLocalDataSourceProvider =
 typedef CategoryLocalDataSourceRef =
     AutoDisposeProviderRef<ICategoryLocalDataSource>;
 String _$categoryRepositoryHash() =>
-    r'93ef52303331804ebdf08ed91db992254f3f1e71';
+    r'4625e757f8f4f8ffe1d886f8380c457541659281';
 
 /// See also [categoryRepository].
 @ProviderFor(categoryRepository)
@@ -63,5 +63,23 @@ final categoryRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CategoryRepositoryRef = AutoDisposeProviderRef<ICategoryRepository>;
+String _$syncMetadataDaoHash() => r'4875e7284109092e2c7f00057f7329e847c5dce2';
+
+/// See also [syncMetadataDao].
+@ProviderFor(syncMetadataDao)
+final syncMetadataDaoProvider = AutoDisposeProvider<SyncMetadataDao>.internal(
+  syncMetadataDao,
+  name: r'syncMetadataDaoProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$syncMetadataDaoHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef SyncMetadataDaoRef = AutoDisposeProviderRef<SyncMetadataDao>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

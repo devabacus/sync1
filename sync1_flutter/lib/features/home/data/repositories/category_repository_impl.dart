@@ -10,6 +10,7 @@ import '../../domain/entities/category/category.dart';
 import '../../domain/entities/extensions/category_entity_extension.dart';
 import '../../domain/repositories/category_repository.dart';
 import '../datasources/local/dao/category/category_dao.dart';
+import '../datasources/local/dao/category/sync_metadata_dao.dart';
 import '../datasources/local/interfaces/category_local_datasource_service.dart';
 import '../datasources/local/sources/category_local_data_source.dart';
 import '../datasources/local/tables/category_table.dart';
@@ -20,6 +21,7 @@ import '../models/extensions/category_model_extension.dart';
 class CategoryRepositoryImpl implements ICategoryRepository {
   final ICategoryLocalDataSource _localDataSource;
   final ICategoryRemoteDataSource _remoteDataSource;
+  final SyncMetadataDao _syncMetadataDao;
   StreamSubscription? _serverStreamSubscription;
 
   // Получаем прямой доступ к DAO для управления статусами
@@ -28,6 +30,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   CategoryRepositoryImpl(
     this._localDataSource,
     this._remoteDataSource,
+    this._syncMetadataDao,
   ) : _categoryDao = (_localDataSource as CategoryLocalDataSource).categoryDao {
     // Автоматически запускаем синхронизацию при создании репозитория
     _initServerSync();
@@ -196,4 +199,5 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       rethrow;
     }
   }
+  
 }

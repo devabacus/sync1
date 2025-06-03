@@ -6,6 +6,21 @@ const _categoryChannel = 'sync1_category_updates';
 
 class CategoryEndpoint extends Endpoint {
   
+
+  /// Получает категории, измененные после указанного времени
+Future<List<Category>> getCategoriesSince(Session session, DateTime? since) async {
+  if (since == null) {
+    // Если since не указан, возвращаем все категории
+    return await getCategories(session);
+  }
+  
+  return await Category.db.find(
+    session,
+    where: (c) => c.lastModified>=since,
+    orderBy: (c) => c.lastModified,
+  );
+}
+
   /// Отправляет уведомление всем подписчикам канала.
   Future<void> _notifyChange(Session session, String changeType) async {
     final message = Greeting(
