@@ -117,4 +117,5 @@ networks:
 
 volumes:
   app_data:
+  redis_data:
     
