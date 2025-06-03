@@ -11,7 +11,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
 @override
 MigrationStrategy get migration => MigrationStrategy(
@@ -21,7 +21,10 @@ MigrationStrategy get migration => MigrationStrategy(
       onUpgrade: (Migrator m, int from, int to) async {
             
         if (from < 2) {
-
+          // Добавляем новые колонки
+          await m.addColumn(categoryTable, categoryTable.lastModified);
+          await m.addColumn(categoryTable, categoryTable.deleted);
+          await m.addColumn(categoryTable, categoryTable.syncStatus);
         }        
         
       },
