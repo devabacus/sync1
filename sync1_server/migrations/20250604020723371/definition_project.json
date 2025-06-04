@@ -23,15 +23,8 @@
         {
           "name": "lastModified",
           "columnType": 4,
-          "isNullable": false,
-          "dartType": "DateTime"
-        },
-        {
-          "name": "deleted",
-          "columnType": 1,
-          "isNullable": false,
-          "columnDefault": "false",
-          "dartType": "bool"
+          "isNullable": true,
+          "dartType": "DateTime?"
         }
       ],
       "foreignKeys": [],
