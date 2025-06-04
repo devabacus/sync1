@@ -27,7 +27,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   final SyncMetadataDao _syncMetadataDao;
   final CategoryDao _categoryDao;
 
-  StreamSubscription? _serverStreamSubscription;
+  StreamSubscription? _serverStreamSubscription;   
   bool _isSyncing = false;
   
   // --- НОВЫЕ ПОЛЯ ДЛЯ УПРАВЛЕНИЯ ПЕРЕПОДКЛЮЧЕНИЕМ ---
