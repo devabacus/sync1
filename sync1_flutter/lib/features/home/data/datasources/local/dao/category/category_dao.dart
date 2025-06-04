@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart';
-
 import '../../../../../../../core/database/local/interface/i_database_service.dart';
 import '../../../../../../../core/database/local/database.dart';
 import '../../tables/category_table.dart';
@@ -12,17 +11,15 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   CategoryDao(IDatabaseService databaseService)
     : super(databaseService.database);
 
-
-   // Этот геттер нужен для транзакций в репозитории
   AppDatabase get db => attachedDatabase;
 
+  // ИЗМЕНЕНИЕ: Исправлен синтаксис where-условия
+  Future<List<CategoryTableData>> getCategories() =>
+    (select(categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())).get();
 
-// Убираем фильтрацию по deleted - теперь возвращаем все записи
-Future<List<CategoryTableData>> getCategories() =>
-    select(categoryTable).get();
-
-Stream<List<CategoryTableData>> watchCategories() =>
-    select(categoryTable).watch();
+  // ИЗМЕНЕНИЕ: Исправлен синтаксис where-условия
+  Stream<List<CategoryTableData>> watchCategories() =>
+    (select(categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())).watch();
 
   Future<CategoryTableData> getCategoryById(String id) =>
       (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();
@@ -75,23 +72,22 @@ Stream<List<CategoryTableData>> watchCategories() =>
     }
   }
 
-  // Теперь это действительно физическое удаление
-  Future<bool> deleteCategory(String id) async {
+  Future<bool> softDeleteCategory(String id) async {
     if (id.isEmpty) {
       throw ArgumentError('ID категории не может быть пустым');
     }
-
-    try {
-      final result =
-          await (delete(categoryTable)..where((t) => t.id.equals(id))).go();
-      return result > 0;
-    } catch (e) {
-      print('Ошибка удаления категории: $e');
-      rethrow;
-    }
+    final companion = CategoryTableCompanion(
+      id: Value(id),
+      syncStatus: Value(SyncStatus.deleted),
+      lastModified: Value(DateTime.now()), 
+    );
+    return update(categoryTable).replace(companion);
   }
 
-  /// Проверяет существование категории по ID
+  Future<int> physicallyDeleteCategory(String id) async {
+    return (delete(categoryTable)..where((t) => t.id.equals(id))).go();
+  }
+
   Future<bool> categoryExists(String id) async {
     if (id.isEmpty) return false;
 
@@ -102,7 +98,6 @@ Stream<List<CategoryTableData>> watchCategories() =>
     return category != null;
   }
 
-  /// Получает количество категорий
   Future<int> getCategoriesCount() async {
     final countQuery = selectOnly(categoryTable)
       ..addColumns([categoryTable.id.count()]);
@@ -111,14 +106,12 @@ Stream<List<CategoryTableData>> watchCategories() =>
     return result.read(categoryTable.id.count()) ?? 0;
   }
 
-    /// Вставляет список категорий в одной транзакции (батче).
-  Future<void> insertCategories(List<CategoryTableCompanion> companions) async {
+    Future<void> insertCategories(List<CategoryTableCompanion> companions) async {
     await batch((batch) {
       batch.insertAll(categoryTable, companions);
     });
   }
 
-  /// Удаляет все категории из таблицы.
   Future<int> deleteAllCategories() {
     return delete(categoryTable).go();
   }

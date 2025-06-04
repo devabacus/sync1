@@ -2,19 +2,13 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 // Перечисление для статусов синхронизации
-enum SyncStatus { local, synced, conflict }
+enum SyncStatus { local, synced, conflict, deleted }
 
 class CategoryTable extends Table {
 
   TextColumn get id => text().clientDefault(() => Uuid().v7())();
   TextColumn get title => text()();
-  
-  // Новые колонки для синхронизации
-  // DateTimeColumn get lastModified => dateTime()();
-    IntColumn get lastModified => integer().map(const MillisecondEpochConverter())();
-
-  
-  // Статус синхронизации. Используем .map, чтобы Drift мог работать с нашим enum.
+  IntColumn get lastModified => integer().map(const MillisecondEpochConverter())();
   TextColumn get syncStatus => text().map(const SyncStatusConverter())();
   
   @override

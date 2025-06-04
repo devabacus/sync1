@@ -38,7 +38,7 @@ class CategoryLocalDataSource implements ICategoryLocalDataSource {
 
   @override
   Future<bool> deleteCategory(String id) async {
-    return categoryDao.deleteCategory(id);
+    return categoryDao.softDeleteCategory(id);
   }
 
 }
