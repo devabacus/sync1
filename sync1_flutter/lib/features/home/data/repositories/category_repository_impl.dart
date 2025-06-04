@@ -1,7 +1,7 @@
 // lib/features/home/data/repositories/category_repository_impl.dart
 
 import 'dart:async';
-import 'dart:math'; // Импортируем для использования функции max
+import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:sync1_client/sync1_client.dart' as serverpod;
 
@@ -27,40 +27,35 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   final SyncMetadataDao _syncMetadataDao;
   final CategoryDao _categoryDao;
 
-  StreamSubscription? _serverStreamSubscription;   
+  StreamSubscription? _serverStreamSubscription;
+  // ИЗМЕНЕНИЕ: Флаг _isSyncing теперь будет надежно защищать от всех видов одновременной синхронизации.
   bool _isSyncing = false;
   
-  // --- НОВЫЕ ПОЛЯ ДЛЯ УПРАВЛЕНИЯ ПЕРЕПОДКЛЮЧЕНИЕМ ---
-  bool _isDisposed = false; // Флаг, что репозиторий уничтожен
-  int _reconnectionAttempt = 0; // Счетчик попыток переподключения
+  bool _isDisposed = false;
+  int _reconnectionAttempt = 0;
 
   CategoryRepositoryImpl(
     this._localDataSource,
     this._remoteDataSource,
     this._syncMetadataDao,
   ) : _categoryDao = (_localDataSource as CategoryLocalDataSource).categoryDao {
-    // Запускаем нашу "живучую" подписку
     _initServerSync();
   }
 
-  /// Инициализирует и поддерживает постоянное подключение к серверному stream.
   void _initServerSync() {
-    if (_isDisposed) return; // Не пытаться подключиться, если репозиторий уже уничтожен
+    if (_isDisposed) return;
     
     print('🌊 Попытка подключения к серверному stream... (попытка #${_reconnectionAttempt + 1})');
-
-    // Отменяем старую подписку, если она вдруг осталась
     _serverStreamSubscription?.cancel();
 
-    // Подписываемся на stream
     _serverStreamSubscription = _remoteDataSource.watchCategories().listen(
       (serverCategories) {
-        // Успешное подключение и получение данных
         print('✅ Stream успешно подключен и получил данные.');
         if (_reconnectionAttempt > 0) {
            print('👍 Соединение с real-time сервером восстановлено!');
         }
-        _reconnectionAttempt = 0; // Сбрасываем счетчик при успехе
+        _reconnectionAttempt = 0;
+        // ИЗМЕНЕНИЕ: Stream теперь вызывает безопасный метод дифференциальной синхронизации.
         _performDifferentialSync(serverCategories);
       },
       onError: (error) {
@@ -71,39 +66,35 @@ class CategoryRepositoryImpl implements ICategoryRepository {
         print('🔌 Серверный stream был закрыт (onDone). Планируем переподключение...');
         _scheduleReconnection();
       },
-      cancelOnError: true, // Важно: автоматически отписываться при ошибке
+      cancelOnError: true,
     );
   }
 
-  /// Планирует следующую попытку переподключения с экспоненциальной задержкой.
   void _scheduleReconnection() {
-    if (_isDisposed) return; // Не планировать, если репозиторий уничтожен
-
-    // Отменяем подписку, чтобы избежать "зомби"
+    if (_isDisposed) return;
     _serverStreamSubscription?.cancel();
-
-    // Экспоненциальная задержка: 2, 4, 8, 16, 32, 60 секунд (максимум)
     final delaySeconds = min(pow(2, _reconnectionAttempt), 60).toInt();
     print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
 
     Future.delayed(Duration(seconds: delaySeconds), () {
        _reconnectionAttempt++;
-      _initServerSync(); // Повторная попытка подключения
+      _initServerSync();
     });
   }
-
-  // --- ОСТАЛЬНОЙ КОД РЕПОЗИТОРИЯ ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ---
-  // (Я привожу его полностью для простоты копирования)
 
   @override
   void dispose() {
     print('🛑 Уничтожение CategoryRepositoryImpl. Отменяем все подписки.');
-    _isDisposed = true; // Устанавливаем флаг, чтобы остановить переподключения
+    _isDisposed = true;
     _serverStreamSubscription?.cancel();
   }
   
+  // ИЗМЕНЕНИЕ: Логика удаления стала умнее.
   Future<void> _performDifferentialSync(List<serverpod.Category> serverCategories) async {
-    if (_isSyncing) return;
+    if (_isSyncing) {
+        print('ℹ️ Дифференциальная синхронизация уже выполняется. Пропуск.');
+        return;
+    }
     _isSyncing = true;
     print('🔄 Начинаем дифференциальную синхронизацию (${serverCategories.length} записей с сервера)');
 
@@ -113,10 +104,19 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       final localCategoriesMap = {for (var c in localCategories) c.id: c};
 
       await _categoryDao.db.transaction(() async {
-        final recordsToDelete = localCategoriesMap.keys.toSet().difference(serverCategoriesMap.keys.toSet());
+        // --- ИСПРАВЛЕННАЯ ЛОГИКА УДАЛЕНИЯ ---
+        // Удаляем только те записи, которые имеют статус 'synced' и отсутствуют на сервере.
+        // Это защищает новые, еще не отправленные оффлайн-записи (статус 'local') от удаления.
+        final recordsToDelete = localCategoriesMap.values
+            .where((localCat) =>
+                !serverCategoriesMap.containsKey(localCat.id) &&
+                localCat.syncStatus == SyncStatus.synced)
+            .map((localCat) => localCat.id)
+            .toList();
+
         for (final id in recordsToDelete) {
           await _categoryDao.deleteCategory(id);
-          print('🗑️ Удалена локальная запись: $id');
+          print('🗑️ Удалена локальная запись (т.к. удалена на сервере): $id');
         }
 
         for (final serverCategory in serverCategories) {
@@ -124,8 +124,9 @@ class CategoryRepositoryImpl implements ICategoryRepository {
 
           if (localCategory == null) {
             await _insertServerCategory(serverCategory);
-            print('➕ Создана новая локальная запись: ${serverCategory.title}');
+            print('➕ Создана новая локальная запись с сервера: ${serverCategory.title}');
           } else {
+            // Разрешение конфликтов остается прежним, оно корректно отдает приоритет локальным изменениям.
             await _resolveConflict(localCategory, serverCategory);
           }
         }
@@ -134,7 +135,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       });
       print('✅ Дифференциальная синхронизация завершена');
     } catch (e, stackTrace) {
-      print('❌ КРИТИЧЕСКАЯ ОШИБКА СИНХРОНИЗАЦИИ: $e\n$stackTrace');
+      print('❌ КРИТИЧЕСКАЯ ОШИБКА ДИФФ. СИНХРОНИЗАЦИИ: $e\n$stackTrace');
     } finally {
       _isSyncing = false;
     }
@@ -169,7 +170,12 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   Future<String> createCategory(CategoryEntity category) async {
     final companion = category.toModel().toCompanion().copyWith(syncStatus: const Value(SyncStatus.local));
     await _categoryDao.createCategory(companion);
-    _syncCreateToServer(category).catchError((e) => print('❌ Ошибка фоновой синхронизации (создание): $e'));
+    // Запускаем фоновую синхронизацию
+    _syncCreateToServer(category).catchError((e) {
+      print('❌ Ошибка фоновой синхронизации (создание): $e');
+      // ИЗМЕНЕНИЕ: Мы не перевыбрасываем ошибку, т.к. запись уже в локальной БД
+      // и будет синхронизирована при следующем подключении.
+    });
     return category.id;
   }
 
@@ -189,40 +195,68 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   }
 
   Future<void> _syncCreateToServer(CategoryEntity category) async {
-    final serverCategory = category.toServerpodCategory();
-    final syncedCategory = await _remoteDataSource.createCategory(serverCategory);
-    await _categoryDao.updateCategory(syncedCategory.toCompanion(SyncStatus.synced));
-    print('✅ Создание "${category.title}" подтверждено сервером.');
+    try {
+      final serverCategory = category.toServerpodCategory();
+      final syncedCategory = await _remoteDataSource.createCategory(serverCategory);
+      // Обновляем локальную запись, ставим статус synced
+      await _categoryDao.updateCategory(syncedCategory.toCompanion(SyncStatus.synced));
+      print('✅ Создание "${category.title}" подтверждено сервером.');
+    } catch(e) {
+       print('⚠️ Не удалось синхронизировать создание "${category.title}". Повторим позже. Ошибка: $e');
+    }
   }
 
   Future<void> _syncUpdateToServer(CategoryEntity category) async {
-    final serverCategory = category.toServerpodCategory();
-    await _remoteDataSource.updateCategory(serverCategory);
-    await _categoryDao.updateCategory(serverCategory.toCompanion(SyncStatus.synced));
-    print('✅ Обновление "${category.title}" подтверждено сервером.');
+    try {
+      final serverCategory = category.toServerpodCategory();
+      await _remoteDataSource.updateCategory(serverCategory);
+      // Обновляем статус после успешной отправки
+      await _categoryDao.updateCategory(serverCategory.toCompanion(SyncStatus.synced));
+      print('✅ Обновление "${category.title}" подтверждено сервером.');
+    } catch(e) {
+      print('⚠️ Не удалось синхронизировать обновление "${category.title}". Повторим позже. Ошибка: $e');
+    }
   }
 
   Future<void> _syncDeleteToServer(String id) async {
-    await _remoteDataSource.deleteCategory(serverpod.UuidValue.fromString(id));
-    print('✅ Удаление "$id" подтверждено сервером.');
+     try {
+        await _remoteDataSource.deleteCategory(serverpod.UuidValue.fromString(id));
+        print('✅ Удаление "$id" подтверждено сервером.');
+     } catch(e) {
+       // Если удаление на сервере не удалось (например, нет сети),
+       // запись останется в локальной БД и будет удалена при следующей диф. синхронизации.
+       // Это ожидаемое поведение.
+       print('⚠️ Не удалось синхронизировать удаление "$id". Ошибка: $e');
+     }
   }
 
+  // ИЗМЕНЕНИЕ: Полностью переработанная, безопасная логика ручной/восстановительной синхронизации.
   @override
   Future<void> syncWithServer() async {
+    if (_isSyncing) {
+        print('ℹ️ Ручная синхронизация уже выполняется. Пропуск.');
+        return;
+    }
+    _isSyncing = true;
+    print('🔄 Запуск ручной/восстановительной синхронизации...');
     try {
-      print('🔄 Запуск ручной синхронизации с сервером...');
-      final lastSync = await _syncMetadataDao.getLastSyncTimestamp(_entityType);
-      
-      final serverCategories = await _getServerChangesSince(lastSync);
-
-      if (serverCategories.isNotEmpty) {
-        await _performDifferentialSync(serverCategories);
-      }
+      // ШАГ 1: СНАЧАЛА отправить все локальные изменения на сервер.
+      // Это самый важный шаг для предотвращения потери данных.
       await _syncLocalChangesToServer();
-      print('✅ Ручная синхронизация завершена');
+
+      // ШАГ 2: ПОСЛЕ этого получить изменения с сервера.
+      // Используем тот же самый безопасный _performDifferentialSync, который использует и stream.
+      // Для этого нам нужен полный слепок состояния сервера.
+      print('🕒 Получаем полный список категорий с сервера для сверки...');
+      final allServerCategories = await _remoteDataSource.getCategories();
+      await _performDifferentialSync(allServerCategories);
+
+      print('✅ Ручная/восстановительная синхронизация завершена');
     } catch (e) {
       print('❌ Ошибка ручной синхронизации: $e');
-      rethrow;
+      rethrow; // Перевыбрасываем, чтобы SyncController мог это увидеть
+    } finally {
+      _isSyncing = false;
     }
   }
 
@@ -235,15 +269,20 @@ class CategoryRepositoryImpl implements ICategoryRepository {
           ..where((t) => t.syncStatus.equals(SyncStatus.local.name)))
         .get();
         
+    if (localChanges.isEmpty) {
+      print('📤 Локальных изменений для отправки нет.');
+      return;
+    }
+    
     print('📤 Найдены ${localChanges.length} локальных изменений для отправки на сервер.');
-
-    if (localChanges.isEmpty) return;
 
     for (final localChange in localChanges) {
       final entity = localChange.toModel().toEntity();
       print('  -> Пытаемся синхронизировать локальную запись: "${entity.title}" (ID: ${entity.id})');
       
       try {
+        // Проверяем, существует ли запись на сервере (может быть, это обновление, а не создание)
+        // Мы используем getCategoryById, чтобы определить, вызывать create или update.
         final serverRecord = await _remoteDataSource.getCategoryById(serverpod.UuidValue.fromString(entity.id));
         
         if (serverRecord != null) {
@@ -255,8 +294,10 @@ class CategoryRepositoryImpl implements ICategoryRepository {
         }
       } catch (e) {
         print('❌ Ошибка синхронизации локальной записи ${localChange.id}: $e');
+        // Ошибка будет обработана при следующей попытке синхронизации
       }
     }
+     print('✅ Синхронизация локальных изменений завершена.');
   }
 
   @override
@@ -266,6 +307,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   Future<CategoryEntity> getCategoryById(String id) async => _localDataSource.getCategoryById(id).then((model) => model.toEntity());
 }
 
+// Вспомогательные расширения остаются без изменений
 extension on CategoryEntity {
   serverpod.Category toServerpodCategory() => serverpod.Category(
         id: serverpod.UuidValue.fromString(id),
