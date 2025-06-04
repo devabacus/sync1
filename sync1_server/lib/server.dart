@@ -2,7 +2,7 @@ import 'package:sync1_server/src/birthday_reminder.dart';
 import 'package:serverpod/serverpod.dart';
 
 import 'package:sync1_server/src/web/routes/root.dart';
-
+import 'package:serverpod_auth_server/serverpod_auth_server.dart' as auth;
 import 'src/generated/protocol.dart';
 import 'src/generated/endpoints.dart';
 
@@ -17,6 +17,23 @@ void run(List<String> args) async {
     Protocol(),
     Endpoints(),
   );
+
+
+   // Настройка аутентификации
+    auth.AuthConfig.set(auth.AuthConfig(
+    sendValidationEmail: (session, email, validationCode) async {
+      // В реальном приложении здесь будет логика отправки email.
+      // Пока просто выводим в консоль для отладки.
+      print('Код подтверждения для $email: $validationCode');
+      return true;
+    },
+    sendPasswordResetEmail: (session, userInfo, validationCode) async {
+      // То же самое для сброса пароля.
+      print('Код сброса пароля для ${userInfo.email}: $validationCode');
+      return true;
+    },
+  ));
+
 
   // Setup a default page at the web root.
   pod.webServer.addRoute(RouteRoot(), '/');

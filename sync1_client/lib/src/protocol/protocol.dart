@@ -15,6 +15,7 @@ import 'category.dart' as _i3;
 import 'category_sync_event.dart' as _i4;
 import 'sync_event_type.dart' as _i5;
 import 'package:sync1_client/src/protocol/category.dart' as _i6;
+import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i7;
 export 'greeting.dart';
 export 'category.dart';
 export 'category_sync_event.dart';
@@ -62,6 +63,9 @@ class Protocol extends _i1.SerializationManager {
       return (data as List).map((e) => deserialize<_i6.Category>(e)).toList()
           as T;
     }
+    try {
+      return _i7.Protocol().deserialize<T>(data, t);
+    } on _i1.DeserializationTypeNotFoundException catch (_) {}
     return super.deserialize<T>(data, t);
   }
 
@@ -80,6 +84,10 @@ class Protocol extends _i1.SerializationManager {
     }
     if (data is _i5.SyncEventType) {
       return 'SyncEventType';
+    }
+    className = _i7.Protocol().getClassNameForObject(data);
+    if (className != null) {
+      return 'serverpod_auth.$className';
     }
     return null;
   }
@@ -101,6 +109,10 @@ class Protocol extends _i1.SerializationManager {
     }
     if (dataClassName == 'SyncEventType') {
       return deserialize<_i5.SyncEventType>(data['data']);
+    }
+    if (dataClassName.startsWith('serverpod_auth.')) {
+      data['className'] = dataClassName.substring(15);
+      return _i7.Protocol().deserializeByClassName(data);
     }
     return super.deserializeByClassName(data);
   }

@@ -14,6 +14,7 @@ import '../endpoints/category_endpoint.dart' as _i2;
 import '../greeting_endpoint.dart' as _i3;
 import 'package:sync1_server/src/generated/category.dart' as _i4;
 import 'package:uuid/uuid_value.dart' as _i5;
+import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i6;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -176,5 +177,6 @@ class Endpoints extends _i1.EndpointDispatch {
         )
       },
     );
+    modules['serverpod_auth'] = _i6.Endpoints()..initializeEndpoints(server);
   }
 }
