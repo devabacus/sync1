@@ -57,6 +57,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   serverpod_auth_email_flutter: ^2.8.0
   serverpod_auth_client: ^2.8.0
+  serverpod_auth_shared_flutter: ^2.8.0
 
 
 dev_dependencies:

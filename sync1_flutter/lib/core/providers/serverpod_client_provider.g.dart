@@ -26,7 +26,7 @@ final serverpodConfigProvider = AutoDisposeProvider<ServerpodConfig>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ServerpodConfigRef = AutoDisposeProviderRef<ServerpodConfig>;
-String _$serverpodClientHash() => r'5e31aee2c1a42dca3be9cd611b42d703a99ed450';
+String _$serverpodClientHash() => r'3a009c9a4976188403e67f85f82e3163ac2896da';
 
 /// Основной провайдер Serverpod клиента
 ///

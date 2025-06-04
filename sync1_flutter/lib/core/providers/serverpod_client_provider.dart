@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sync1_client/sync1_client.dart';
+import 'package:serverpod_auth_shared_flutter/serverpod_auth_shared_flutter.dart';
 import '../config/config.dart';
 
 part 'serverpod_client_provider.g.dart';
@@ -21,7 +22,7 @@ class ServerpodConfig {
 ServerpodConfig serverpodConfig(Ref ref) {
   return ServerpodConfig(
     serverUrl: AppConfig.baseUrl,
-    enableLogging: true, // Можно вынести в AppConfig при необходимости
+    enableLogging: true,
   );
 }
 
@@ -31,14 +32,17 @@ Client serverpodClient(Ref ref) {
   ref.keepAlive();
   final config = ref.watch(serverpodConfigProvider);
   
-  // Создаем простой клиент без дополнительных мониторов
-  final client = Client(config.serverUrl);
+  // Создаем клиент с authenticationKeyManager
+  final client = Client(
+    config.serverUrl,
+    authenticationKeyManager: FlutterAuthenticationKeyManager(),
+  );
 
   if (config.enableLogging) {
     print('Serverpod client создан для ${config.serverUrl}');
   }
 
-  // Очистка ресурсов при dispose (если потребуется)
+  // Очистка ресурсов при dispose
   ref.onDispose(() {
     if (config.enableLogging) {
       print('Serverpod client dispose');
@@ -54,7 +58,6 @@ Future<bool> serverpodConnectionCheck(Ref ref) async {
   final client = ref.watch(serverpodClientProvider);
   
   try {
-    // Простая проверка - попытка получить список категорий
     await client.category.getCategories();
     return true;
   } catch (e) {
