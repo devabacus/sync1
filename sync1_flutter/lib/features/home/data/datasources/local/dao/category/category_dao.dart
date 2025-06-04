@@ -72,17 +72,22 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
+   // ИЗМЕНЕНИЕ: Исправлен метод softDeleteCategory
   Future<bool> softDeleteCategory(String id) async {
     if (id.isEmpty) {
       throw ArgumentError('ID категории не может быть пустым');
     }
     final companion = CategoryTableCompanion(
-      id: Value(id),
+      // Мы не передаем id в companion для write, так как он будет в where
       syncStatus: Value(SyncStatus.deleted),
       lastModified: Value(DateTime.now()), 
     );
-    return update(categoryTable).replace(companion);
+    // Используем (update()..where()).write() для частичного обновления
+    final updatedRows = await (update(categoryTable)..where((t) => t.id.equals(id))).write(companion);
+    // write возвращает количество измененных строк
+    return updatedRows > 0;
   }
+
 
   Future<int> physicallyDeleteCategory(String id) async {
     return (delete(categoryTable)..where((t) => t.id.equals(id))).go();
