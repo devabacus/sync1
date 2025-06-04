@@ -16,12 +16,14 @@ abstract class Category implements _i1.SerializableModel {
     this.id,
     required this.title,
     this.lastModified,
+    required this.userId,
   });
 
   factory Category({
     _i1.UuidValue? id,
     required String title,
     DateTime? lastModified,
+    required int userId,
   }) = _CategoryImpl;
 
   factory Category.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -34,6 +36,7 @@ abstract class Category implements _i1.SerializableModel {
           ? null
           : _i1.DateTimeJsonExtension.fromJson(
               jsonSerialization['lastModified']),
+      userId: jsonSerialization['userId'] as int,
     );
   }
 
@@ -46,6 +49,8 @@ abstract class Category implements _i1.SerializableModel {
 
   DateTime? lastModified;
 
+  int userId;
+
   /// Returns a shallow copy of this [Category]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
@@ -53,6 +58,7 @@ abstract class Category implements _i1.SerializableModel {
     _i1.UuidValue? id,
     String? title,
     DateTime? lastModified,
+    int? userId,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -60,6 +66,7 @@ abstract class Category implements _i1.SerializableModel {
       if (id != null) 'id': id?.toJson(),
       'title': title,
       if (lastModified != null) 'lastModified': lastModified?.toJson(),
+      'userId': userId,
     };
   }
 
@@ -76,10 +83,12 @@ class _CategoryImpl extends Category {
     _i1.UuidValue? id,
     required String title,
     DateTime? lastModified,
+    required int userId,
   }) : super._(
           id: id,
           title: title,
           lastModified: lastModified,
+          userId: userId,
         );
 
   /// Returns a shallow copy of this [Category]
@@ -90,12 +99,14 @@ class _CategoryImpl extends Category {
     Object? id = _Undefined,
     String? title,
     Object? lastModified = _Undefined,
+    int? userId,
   }) {
     return Category(
       id: id is _i1.UuidValue? ? id : this.id,
       title: title ?? this.title,
       lastModified:
           lastModified is DateTime? ? lastModified : this.lastModified,
+      userId: userId ?? this.userId,
     );
   }
 }

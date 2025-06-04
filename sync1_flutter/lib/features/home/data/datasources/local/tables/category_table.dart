@@ -11,6 +11,9 @@ class CategoryTable extends Table {
   IntColumn get lastModified => integer().map(const MillisecondEpochConverter())();
   TextColumn get syncStatus => text().map(const SyncStatusConverter())();
   
+  // Добавляем поле для хранения ID пользователя
+  IntColumn get userId => integer().nullable()();
+  
   @override
   Set<Column> get primaryKey => {id};
 }

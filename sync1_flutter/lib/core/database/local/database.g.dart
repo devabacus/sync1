@@ -46,8 +46,23 @@ class $CategoryTableTable extends CategoryTable
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       ).withConverter<SyncStatus>($CategoryTableTable.$convertersyncStatus);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
   @override
-  List<GeneratedColumn> get $columns => [id, title, lastModified, syncStatus];
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+    'user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    lastModified,
+    syncStatus,
+    userId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -70,6 +85,12 @@ class $CategoryTableTable extends CategoryTable
       );
     } else if (isInserting) {
       context.missing(_titleMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
     }
     return context;
   }
@@ -102,6 +123,10 @@ class $CategoryTableTable extends CategoryTable
           data['${effectivePrefix}sync_status'],
         )!,
       ),
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_id'],
+      ),
     );
   }
 
@@ -122,11 +147,13 @@ class CategoryTableData extends DataClass
   final String title;
   final DateTime lastModified;
   final SyncStatus syncStatus;
+  final int? userId;
   const CategoryTableData({
     required this.id,
     required this.title,
     required this.lastModified,
     required this.syncStatus,
+    this.userId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -143,6 +170,9 @@ class CategoryTableData extends DataClass
         $CategoryTableTable.$convertersyncStatus.toSql(syncStatus),
       );
     }
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<int>(userId);
+    }
     return map;
   }
 
@@ -152,6 +182,8 @@ class CategoryTableData extends DataClass
       title: Value(title),
       lastModified: Value(lastModified),
       syncStatus: Value(syncStatus),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
     );
   }
 
@@ -165,6 +197,7 @@ class CategoryTableData extends DataClass
       title: serializer.fromJson<String>(json['title']),
       lastModified: serializer.fromJson<DateTime>(json['lastModified']),
       syncStatus: serializer.fromJson<SyncStatus>(json['syncStatus']),
+      userId: serializer.fromJson<int?>(json['userId']),
     );
   }
   @override
@@ -175,6 +208,7 @@ class CategoryTableData extends DataClass
       'title': serializer.toJson<String>(title),
       'lastModified': serializer.toJson<DateTime>(lastModified),
       'syncStatus': serializer.toJson<SyncStatus>(syncStatus),
+      'userId': serializer.toJson<int?>(userId),
     };
   }
 
@@ -183,11 +217,13 @@ class CategoryTableData extends DataClass
     String? title,
     DateTime? lastModified,
     SyncStatus? syncStatus,
+    Value<int?> userId = const Value.absent(),
   }) => CategoryTableData(
     id: id ?? this.id,
     title: title ?? this.title,
     lastModified: lastModified ?? this.lastModified,
     syncStatus: syncStatus ?? this.syncStatus,
+    userId: userId.present ? userId.value : this.userId,
   );
   CategoryTableData copyWithCompanion(CategoryTableCompanion data) {
     return CategoryTableData(
@@ -199,6 +235,7 @@ class CategoryTableData extends DataClass
               : this.lastModified,
       syncStatus:
           data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      userId: data.userId.present ? data.userId.value : this.userId,
     );
   }
 
@@ -208,13 +245,14 @@ class CategoryTableData extends DataClass
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('lastModified: $lastModified, ')
-          ..write('syncStatus: $syncStatus')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('userId: $userId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, title, lastModified, syncStatus);
+  int get hashCode => Object.hash(id, title, lastModified, syncStatus, userId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -222,7 +260,8 @@ class CategoryTableData extends DataClass
           other.id == this.id &&
           other.title == this.title &&
           other.lastModified == this.lastModified &&
-          other.syncStatus == this.syncStatus);
+          other.syncStatus == this.syncStatus &&
+          other.userId == this.userId);
 }
 
 class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
@@ -230,12 +269,14 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   final Value<String> title;
   final Value<DateTime> lastModified;
   final Value<SyncStatus> syncStatus;
+  final Value<int?> userId;
   final Value<int> rowid;
   const CategoryTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.lastModified = const Value.absent(),
     this.syncStatus = const Value.absent(),
+    this.userId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CategoryTableCompanion.insert({
@@ -243,6 +284,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     required String title,
     required DateTime lastModified,
     required SyncStatus syncStatus,
+    this.userId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : title = Value(title),
        lastModified = Value(lastModified),
@@ -252,6 +294,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     Expression<String>? title,
     Expression<int>? lastModified,
     Expression<String>? syncStatus,
+    Expression<int>? userId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -259,6 +302,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
       if (title != null) 'title': title,
       if (lastModified != null) 'last_modified': lastModified,
       if (syncStatus != null) 'sync_status': syncStatus,
+      if (userId != null) 'user_id': userId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -268,6 +312,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     Value<String>? title,
     Value<DateTime>? lastModified,
     Value<SyncStatus>? syncStatus,
+    Value<int?>? userId,
     Value<int>? rowid,
   }) {
     return CategoryTableCompanion(
@@ -275,6 +320,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
       title: title ?? this.title,
       lastModified: lastModified ?? this.lastModified,
       syncStatus: syncStatus ?? this.syncStatus,
+      userId: userId ?? this.userId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -298,6 +344,9 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
         $CategoryTableTable.$convertersyncStatus.toSql(syncStatus.value),
       );
     }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -311,6 +360,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
           ..write('title: $title, ')
           ..write('lastModified: $lastModified, ')
           ..write('syncStatus: $syncStatus, ')
+          ..write('userId: $userId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -692,6 +742,7 @@ typedef $$CategoryTableTableCreateCompanionBuilder =
       required String title,
       required DateTime lastModified,
       required SyncStatus syncStatus,
+      Value<int?> userId,
       Value<int> rowid,
     });
 typedef $$CategoryTableTableUpdateCompanionBuilder =
@@ -700,6 +751,7 @@ typedef $$CategoryTableTableUpdateCompanionBuilder =
       Value<String> title,
       Value<DateTime> lastModified,
       Value<SyncStatus> syncStatus,
+      Value<int?> userId,
       Value<int> rowid,
     });
 
@@ -733,6 +785,11 @@ class $$CategoryTableTableFilterComposer
     column: $table.syncStatus,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
+
+  ColumnFilters<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$CategoryTableTableOrderingComposer
@@ -763,6 +820,11 @@ class $$CategoryTableTableOrderingComposer
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoryTableTableAnnotationComposer
@@ -791,6 +853,9 @@ class $$CategoryTableTableAnnotationComposer
         column: $table.syncStatus,
         builder: (column) => column,
       );
+
+  GeneratedColumn<int> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
 }
 
 class $$CategoryTableTableTableManager
@@ -836,12 +901,14 @@ class $$CategoryTableTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
+                Value<int?> userId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoryTableCompanion(
                 id: id,
                 title: title,
                 lastModified: lastModified,
                 syncStatus: syncStatus,
+                userId: userId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -850,12 +917,14 @@ class $$CategoryTableTableTableManager
                 required String title,
                 required DateTime lastModified,
                 required SyncStatus syncStatus,
+                Value<int?> userId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoryTableCompanion.insert(
                 id: id,
                 title: title,
                 lastModified: lastModified,
                 syncStatus: syncStatus,
+                userId: userId,
                 rowid: rowid,
               ),
           withReferenceMapper:
