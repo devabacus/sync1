@@ -5,11 +5,11 @@ import '../interfaces/category_remote_datasource_service.dart';
 /// Реализация работы с категориями через Serverpod сервер
 class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   final Client _client;
-  
+
   // Subscription для управления streaming подключением
   StreamSubscription<List<Category>>? _streamSubscription;
   StreamController<List<Category>>? _categoriesStreamController;
-  
+
   CategoryRemoteDataSource(this._client);
 
   @override
@@ -19,6 +19,18 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
       return categories;
     } catch (e) {
       print('Ошибка получения категорий: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Category>> getCategoriesSince(DateTime? since) async {
+    try {
+      // Вызываем правильный метод на клиенте Serverpod
+      final categories = await _client.category.getCategoriesSince(since);
+      return categories;
+    } catch (e) {
+      print('Ошибка получения категорий c $since: $e');
       rethrow;
     }
   }
@@ -35,19 +47,19 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   }
 
   @override
-Future<Category> createCategory(Category category) async {
-  print('🚀 Remote: Отправляем на сервер: ${category.title}');
-  print('🚀 Remote: Server URL: ${_client.host}'); // Проверьте URL
-  
-  try {
-    final result = await _client.category.createCategory(category);
-    print('✅ Remote: Успешно создано на сервере');
-    return result;
-  } catch (e) {
-    print('❌ Remote: Ошибка создания на сервере: $e');
-    rethrow;
+  Future<Category> createCategory(Category category) async {
+    print('🚀 Remote: Отправляем на сервер: ${category.title}');
+    print('🚀 Remote: Server URL: ${_client.host}'); // Проверьте URL
+
+    try {
+      final result = await _client.category.createCategory(category);
+      print('✅ Remote: Успешно создано на сервере');
+      return result;
+    } catch (e) {
+      print('❌ Remote: Ошибка создания на сервере: $e');
+      rethrow;
+    }
   }
-}
 
   @override
   Future<bool> updateCategory(Category category) async {
@@ -74,7 +86,8 @@ Future<Category> createCategory(Category category) async {
   @override
   Stream<List<Category>> watchCategories() {
     // Если stream уже создан, возвращаем его
-    if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+    if (_categoriesStreamController != null &&
+        !_categoriesStreamController!.isClosed) {
       return _categoriesStreamController!.stream;
     }
 
@@ -90,37 +103,41 @@ Future<Category> createCategory(Category category) async {
   /// Подключается к серверному streaming методу
   void _connectToServerStream() {
     try {
-          print('🌊 Подключаемся к server stream...');
+      print('🌊 Подключаемся к server stream...');
 
       // Используем настоящий Serverpod streaming method
       final serverStream = _client.category.watchCategories();
-      
+
       _streamSubscription = serverStream.listen(
         (categories) {
           // Перенаправляем данные в наш broadcast stream
-           print('🔄 Получены данные из stream: ${categories.length} категорий');
-          if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+          print('🔄 Получены данные из stream: ${categories.length} категорий');
+          if (_categoriesStreamController != null &&
+              !_categoriesStreamController!.isClosed) {
             _categoriesStreamController!.add(categories);
           }
         },
         onError: (error) {
           print('Ошибка в server stream: $error');
-          if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+          if (_categoriesStreamController != null &&
+              !_categoriesStreamController!.isClosed) {
             _categoriesStreamController!.addError(error);
           }
         },
         onDone: () {
           print('Server stream завершен');
-          if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+          if (_categoriesStreamController != null &&
+              !_categoriesStreamController!.isClosed) {
             _categoriesStreamController!.close();
           }
         },
       );
-      
+
       print('Подключено к Serverpod streaming method');
     } catch (e) {
       print('Ошибка подключения к server stream: $e');
-      if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+      if (_categoriesStreamController != null &&
+          !_categoriesStreamController!.isClosed) {
         _categoriesStreamController!.addError(e);
       }
     }
@@ -143,11 +160,13 @@ Future<Category> createCategory(Category category) async {
       // Простая стратегия синхронизации:
       // 1. Получаем все категории с сервера
       final serverCategories = await getCategories();
-      
+
       // 2. В будущем здесь будет более сложная логика merge/conflict resolution
       // Пока просто возвращаем серверные данные как актуальные
-      
-      print('Синхронизация: локальных ${localCategories.length}, серверных ${serverCategories.length}');
+
+      print(
+        'Синхронизация: локальных ${localCategories.length}, серверных ${serverCategories.length}',
+      );
       return serverCategories;
     } catch (e) {
       print('Ошибка синхронизации категорий: $e');
@@ -161,13 +180,14 @@ Future<Category> createCategory(Category category) async {
     // Закрываем подписку на server stream
     await _streamSubscription?.cancel();
     _streamSubscription = null;
-    
+
     // Закрываем broadcast stream controller
-    if (_categoriesStreamController != null && !_categoriesStreamController!.isClosed) {
+    if (_categoriesStreamController != null &&
+        !_categoriesStreamController!.isClosed) {
       await _categoriesStreamController!.close();
       _categoriesStreamController = null;
     }
-    
+
     print('Remote data source streams закрыты');
   }
 

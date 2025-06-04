@@ -10,7 +10,9 @@ class CategoryTable extends Table {
   TextColumn get title => text()();
   
   // Новые колонки для синхронизации
-  DateTimeColumn get lastModified => dateTime()();
+  // DateTimeColumn get lastModified => dateTime()();
+    IntColumn get lastModified => integer().map(const MillisecondEpochConverter())();
+
   
   // Статус синхронизации. Используем .map, чтобы Drift мог работать с нашим enum.
   TextColumn get syncStatus => text().map(const SyncStatusConverter())();
@@ -30,5 +32,21 @@ class SyncStatusConverter extends TypeConverter<SyncStatus, String> {
   @override
   String toSql(SyncStatus value) {
     return value.name;
+  }
+}
+
+class MillisecondEpochConverter extends TypeConverter<DateTime, int> {
+  const MillisecondEpochConverter();
+  
+  @override
+  DateTime fromSql(int fromDb) {
+    // Преобразуем Int из БД в DateTime
+    return DateTime.fromMillisecondsSinceEpoch(fromDb, isUtc: true);
+  }
+
+  @override
+  int toSql(DateTime value) {
+    // Преобразуем DateTime в Int для записи в БД
+    return value.millisecondsSinceEpoch;
   }
 }

@@ -36,4 +36,6 @@ abstract class ICategoryRemoteDataSource {
 
   /// Закрыть все активные stream подключения
   Future<void> closeStreams();
+    Future<List<Category>> getCategoriesSince(DateTime? since); 
+
 }
