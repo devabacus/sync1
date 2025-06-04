@@ -9,4 +9,6 @@ abstract class ICategoryRepository {
   Future<bool> deleteCategory(String id);
   Future<void> syncWithServer(); // <-- Add this line
   void dispose();
+  // void notifyNetworkRestored();
+
 }
