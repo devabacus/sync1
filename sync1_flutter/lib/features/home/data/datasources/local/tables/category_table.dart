@@ -11,7 +11,6 @@ class CategoryTable extends Table {
   
   // Новые колонки для синхронизации
   DateTimeColumn get lastModified => dateTime()();
-  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
   
   // Статус синхронизации. Используем .map, чтобы Drift мог работать с нашим enum.
   TextColumn get syncStatus => text().map(const SyncStatusConverter())();

@@ -59,6 +59,21 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       );
 
       await _categoryDao.db.transaction(() async {
+        // Получаем все локальные ID
+        final localCategories = await _categoryDao.getCategories();
+        final localIds = localCategories.map((c) => c.id).toSet();
+        final serverIds = serverCategories.map((c) => c.id.toString()).toSet();
+        
+        // Находим удаленные на сервере категории
+        final deletedIds = localIds.difference(serverIds);
+        
+        // Удаляем локальные записи, которых нет на сервере
+        for (final deletedId in deletedIds) {
+          await _categoryDao.deleteCategory(deletedId);
+          print('🗑️ Удалена локальная категория: $deletedId');
+        }
+
+        // Обрабатываем существующие и новые записи
         for (final serverCategory in serverCategories) {
           await _processSingleCategoryUpdate(serverCategory);
         }
@@ -88,14 +103,7 @@ Future<void> _processSingleCategoryUpdate(serverpod.Category serverCategory) asy
     localCategory = null;
   }
 
-  if (serverCategory.deleted) {
-    // ✅ Обрабатываем удаление с сервера
-    if (localCategory != null) {
-      await _markCategoryAsDeleted(categoryId);
-      print('🗑️ Категория удалена с сервера: ${serverCategory.title}');
-    }
-    // Если локальной записи нет, ничего не делаем
-  } else if (localCategory == null) {
+  if (localCategory == null) {
     // Новая запись с сервера - просто добавляем
     await _insertServerCategory(serverCategory);
     print('➕ Добавлена новая категория: ${serverCategory.title}');
@@ -105,26 +113,12 @@ Future<void> _processSingleCategoryUpdate(serverpod.Category serverCategory) asy
   }
 }
 
-/// Помечает локальную запись как удаленную (синхронизированное удаление)
-Future<void> _markCategoryAsDeleted(String categoryId) async {
-  final companion = CategoryTableCompanion(
-    id: Value(categoryId),
-    deleted: const Value(true),
-    lastModified: Value(DateTime.now().toUtc()),
-    syncStatus: const Value(SyncStatus.synced), // Удаление пришло с сервера
-  );
-  
-  await _categoryDao.updateCategory(companion);
-}
-
   /// Вставляет новую категорию с сервера
 Future<void> _insertServerCategory(serverpod.Category serverCategory) async {
   final companion = CategoryTableCompanion.insert(
     id: Value(serverCategory.id.toString()),
     title: serverCategory.title,
-    // Используем текущее время, если сервер не передал lastModified
     lastModified: serverCategory.lastModified ?? DateTime.now().toUtc(),
-    deleted: Value(serverCategory.deleted),
     syncStatus: SyncStatus.synced,
   );
 
@@ -136,7 +130,6 @@ Future<void> _resolveConflict(
   CategoryTableData localCategory,
   serverpod.Category serverCategory,
 ) async {
-  // Используем текущее время, если сервер не передал lastModified
   final serverTime = serverCategory.lastModified ?? DateTime.now().toUtc();
   final localTime = localCategory.lastModified;
 
@@ -176,9 +169,7 @@ Future<void> _updateToServerVersion(
   final companion = CategoryTableCompanion(
     id: Value(categoryId),
     title: Value(serverCategory.title),
-    // Используем текущее время, если сервер не передал lastModified
     lastModified: Value(serverCategory.lastModified ?? DateTime.now().toUtc()),
-    deleted: Value(serverCategory.deleted),
     syncStatus: Value(isConflict ? SyncStatus.conflict : SyncStatus.synced),
   );
 
@@ -187,23 +178,17 @@ Future<void> _updateToServerVersion(
 
   /// Планирует повторную синхронизацию локальной записи
   Future<void> _retryLocalSync(CategoryTableData localCategory) async {
-    // В этой реализации просто пытаемся отправить на сервер
     try {
       final entity = localCategory.toModel().toEntity();
-      if (localCategory.deleted) {
-        await _syncDeleteToServer(localCategory.id);
-      } else {
-        await _syncUpdateToServer(entity);
-      }
+      await _syncUpdateToServer(entity);
     } catch (e) {
       print('❌ Ошибка повторной синхронизации: $e');
-      // В реальном приложении здесь можно было бы добавить в очередь повторных попыток
     }
   }
 
   @override
   Stream<List<CategoryEntity>> watchCategories() {
-    // UI слушает только локальную базу и получает только НЕ удаленные записи.
+    // UI слушает только локальную базу
     return _localDataSource.watchCategories().map(
       (models) => models.toEntities(),
     );
@@ -216,7 +201,6 @@ Future<void> _updateToServerVersion(
       id: Value(category.id),
       title: category.title,
       lastModified: category.lastModified,
-      // Устанавливаем статус 'local', чтобы запись ушла на сервер
       syncStatus: SyncStatus.local,
     );
 
@@ -236,7 +220,6 @@ Future<void> _updateToServerVersion(
     // 1. Готовим Companion с правильным статусом
     final companion = category.toModel().toCompanion().copyWith(
       lastModified: Value(category.lastModified),
-      // Устанавливаем статус 'local' при любом локальном изменении
       syncStatus: const Value(SyncStatus.local),
     );
 
@@ -252,34 +235,22 @@ Future<void> _updateToServerVersion(
   }
 
   @override
-Future<bool> deleteCategory(String id) async {
-  try {
-    // 1. Получаем существующую запись
-    final existingCategory = await _categoryDao.getCategoryById(id);
-    
-    // 2. "Мягкое удаление": помечаем запись как удаленную и ставим статус 'local'
-    final companion = CategoryTableCompanion(
-      id: Value(id),
-      title: Value(existingCategory.title), // Сохраняем существующий title
-      lastModified: Value(DateTime.now().toUtc()),
-      deleted: const Value(true),
-      syncStatus: const Value(SyncStatus.local),
-    );
-    
-    // 3. Используем update для установки флагов
-    final result = await _categoryDao.updateCategory(companion);
+  Future<bool> deleteCategory(String id) async {
+    try {
+      // Физическое удаление из локальной базы
+      final result = await _categoryDao.deleteCategory(id);
 
-    // 4. Пытаемся синхронизировать удаление с сервером
-    _syncDeleteToServer(id).catchError((error) {
-       print('❌ Ошибка синхронизации удаления: $error');
-    });
+      // Пытаемся синхронизировать удаление с сервером
+      _syncDeleteToServer(id).catchError((error) {
+        print('❌ Ошибка синхронизации удаления: $error');
+      });
 
-    return result;
-  } catch (e) {
-    print('❌ Ошибка при удалении категории: $e');
-    return false;
+      return result;
+    } catch (e) {
+      print('❌ Ошибка при удалении категории: $e');
+      return false;
+    }
   }
-}
 
   @override
   Future<void> syncWithServer() async {
@@ -310,17 +281,12 @@ Future<bool> deleteCategory(String id) async {
   Future<List<serverpod.Category>> _getServerChangesSince(
     DateTime? since,
   ) async {
-    // Предполагаем, что на сервере есть метод getCategoriesSince
-    // Пока используем обычный getCategories, но в идеале нужен дифференциальный метод
     return await _remoteDataSource.getCategories();
   }
 
   /// Синхронизирует все локальные несинхронизированные изменения с сервером
 Future<void> _syncLocalChangesToServer() async {
-  // Получаем все записи со статусом 'local' или 'conflict' - конвертируем enum в строки
-  // final localChanges = await (_categoryDao.select(_categoryDao.categoryTable)
   final localChanges = await (_categoryDao.db.select(_categoryDao.categoryTable)
-
         ..where((t) => t.syncStatus.isIn([
           SyncStatus.local.name, 
           SyncStatus.conflict.name
@@ -329,13 +295,8 @@ Future<void> _syncLocalChangesToServer() async {
 
   for (final localChange in localChanges) {
     try {
-      if (localChange.deleted) {
-        await _syncDeleteToServer(localChange.id);
-      } else {
-        // Используем extension для конвертации в entity
-        final entity = localChange.toModel().toEntity();
-        await _syncUpdateToServer(entity);
-      }
+      final entity = localChange.toModel().toEntity();
+      await _syncUpdateToServer(entity);
       
       // После успешной синхронизации обновляем статус
       await _categoryDao.updateCategory(CategoryTableCompanion(
@@ -345,7 +306,6 @@ Future<void> _syncLocalChangesToServer() async {
       
     } catch (e) {
       print('❌ Ошибка синхронизации записи ${localChange.id}: $e');
-      // Продолжаем с другими записями
     }
   }
 }
@@ -371,7 +331,6 @@ Future<void> _syncLocalChangesToServer() async {
       id: serverpod.UuidValue.fromString(category.id),
       title: category.title,
       lastModified: category.lastModified,
-      deleted: false,
     );
 
     await _remoteDataSource.createCategory(serverpodCategory);
@@ -383,7 +342,6 @@ Future<void> _syncLocalChangesToServer() async {
       id: serverpod.UuidValue.fromString(category.id),
       title: category.title,
       lastModified: category.lastModified,
-      deleted: false,
     );
 
     await _remoteDataSource.updateCategory(serverpodCategory);

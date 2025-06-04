@@ -17,12 +17,12 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   AppDatabase get db => attachedDatabase;
 
 
-// В category_dao.dart
+// Убираем фильтрацию по deleted - теперь возвращаем все записи
 Future<List<CategoryTableData>> getCategories() =>
-    (select(categoryTable)..where((t) => t.deleted.equals(false))).get();
+    select(categoryTable).get();
 
 Stream<List<CategoryTableData>> watchCategories() =>
-    (select(categoryTable)..where((t) => t.deleted.equals(false))).watch();
+    select(categoryTable).watch();
 
   Future<CategoryTableData> getCategoryById(String id) =>
       (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();
@@ -37,9 +37,6 @@ Stream<List<CategoryTableData>> watchCategories() =>
     }
 
     final id = companion.id.value;
-
-    
-
 
     try {
       final existingCategory =
@@ -78,6 +75,7 @@ Stream<List<CategoryTableData>> watchCategories() =>
     }
   }
 
+  // Теперь это действительно физическое удаление
   Future<bool> deleteCategory(String id) async {
     if (id.isEmpty) {
       throw ArgumentError('ID категории не может быть пустым');

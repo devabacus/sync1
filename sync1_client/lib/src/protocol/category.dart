@@ -16,14 +16,12 @@ abstract class Category implements _i1.SerializableModel {
     this.id,
     required this.title,
     this.lastModified,
-    bool? deleted,
-  }) : deleted = deleted ?? false;
+  });
 
   factory Category({
     _i1.UuidValue? id,
     required String title,
     DateTime? lastModified,
-    bool? deleted,
   }) = _CategoryImpl;
 
   factory Category.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -36,7 +34,6 @@ abstract class Category implements _i1.SerializableModel {
           ? null
           : _i1.DateTimeJsonExtension.fromJson(
               jsonSerialization['lastModified']),
-      deleted: jsonSerialization['deleted'] as bool,
     );
   }
 
@@ -49,8 +46,6 @@ abstract class Category implements _i1.SerializableModel {
 
   DateTime? lastModified;
 
-  bool deleted;
-
   /// Returns a shallow copy of this [Category]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
@@ -58,7 +53,6 @@ abstract class Category implements _i1.SerializableModel {
     _i1.UuidValue? id,
     String? title,
     DateTime? lastModified,
-    bool? deleted,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -66,7 +60,6 @@ abstract class Category implements _i1.SerializableModel {
       if (id != null) 'id': id?.toJson(),
       'title': title,
       if (lastModified != null) 'lastModified': lastModified?.toJson(),
-      'deleted': deleted,
     };
   }
 
@@ -83,12 +76,10 @@ class _CategoryImpl extends Category {
     _i1.UuidValue? id,
     required String title,
     DateTime? lastModified,
-    bool? deleted,
   }) : super._(
           id: id,
           title: title,
           lastModified: lastModified,
-          deleted: deleted,
         );
 
   /// Returns a shallow copy of this [Category]
@@ -99,14 +90,12 @@ class _CategoryImpl extends Category {
     Object? id = _Undefined,
     String? title,
     Object? lastModified = _Undefined,
-    bool? deleted,
   }) {
     return Category(
       id: id is _i1.UuidValue? ? id : this.id,
       title: title ?? this.title,
       lastModified:
           lastModified is DateTime? ? lastModified : this.lastModified,
-      deleted: deleted ?? this.deleted,
     );
   }
 }

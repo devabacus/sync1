@@ -4,4 +4,3 @@ fields:
   id: UuidValue?, defaultPersist=random_v7
   title: String
   lastModified: DateTime?,
-  deleted: bool, default=false

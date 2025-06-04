@@ -50,13 +50,6 @@ class Protocol extends _i1.SerializationManagerServer {
           isNullable: true,
           dartType: 'DateTime?',
         ),
-        _i2.ColumnDefinition(
-          name: 'deleted',
-          columnType: _i2.ColumnType.boolean,
-          isNullable: false,
-          dartType: 'bool',
-          columnDefault: 'false',
-        ),
       ],
       foreignKeys: [],
       indexes: [
