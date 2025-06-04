@@ -182,14 +182,40 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     return await (_remoteDataSource as CategoryRemoteDataSource).getCategoriesSince(since);
   }  
 
+  // lib/features/home/data/repositories/category_repository_impl.dart
+
   Future<void> _syncLocalChangesToServer() async {
-    final localChanges = await (_categoryDao.select(_categoryDao.categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.local.name))).get();
+    // 1. Находим все записи, которые нужно отправить
+    final localChanges = await (_categoryDao.select(_categoryDao.categoryTable)
+          ..where((t) => t.syncStatus.equals(SyncStatus.local.name)))
+        .get();
+        
     print('📤 Найдены ${localChanges.length} локальных изменений для отправки на сервер.');
+
+    if (localChanges.isEmpty) return;
+
+    // 2. Проходим по каждой записи и решаем, что с ней делать
     for (final localChange in localChanges) {
+      final entity = localChange.toModel().toEntity();
+      print('  -> Пытаемся синхронизировать локальную запись: "${entity.title}" (ID: ${entity.id})');
+      
       try {
-        await _syncUpdateToServer(localChange.toModel().toEntity());
+        // 3. Проверяем, существует ли запись на сервере, чтобы понять, создавать её или обновлять
+        final serverRecord = await _remoteDataSource.getCategoryById(serverpod.UuidValue.fromString(entity.id));
+        
+        if (serverRecord != null) {
+          // Если запись на сервере уже есть - значит, это было офлайн-ОБНОВЛЕНИЕ.
+          print('    -- Запись существует на сервере. Обновляем...');
+          await _syncUpdateToServer(entity);
+        } else {
+          // Если записи на сервере нет - значит, это было офлайн-СОЗДАНИЕ.
+          print('    -- Запись новая. Создаем на сервере...');
+          await _syncCreateToServer(entity);
+        }
       } catch (e) {
         print('❌ Ошибка синхронизации локальной записи ${localChange.id}: $e');
+        // В случае ошибки мы не меняем статус записи, оставляя ее `local`,
+        // чтобы приложение попробовало синхронизировать ее в следующий раз.
       }
     }
   }
