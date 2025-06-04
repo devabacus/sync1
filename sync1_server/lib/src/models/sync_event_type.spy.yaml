@@ -1,0 +1,5 @@
+enum: SyncEventType
+values:
+  - create
+  - update
+  - delete

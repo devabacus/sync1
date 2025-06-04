@@ -1,0 +1,5 @@
+class: CategorySyncEvent
+fields:
+  type: SyncEventType
+  category: Category?,  # Отправляем полную категорию при создании/обновлении
+  id: UuidValue?,       # Отправляем только ID при удалении

@@ -137,8 +137,8 @@ class Endpoints extends _i1.EndpointDispatch {
             params['id'],
           ),
         ),
-        'watchCategories': _i1.MethodStreamConnector(
-          name: 'watchCategories',
+        'watchEvents': _i1.MethodStreamConnector(
+          name: 'watchEvents',
           params: {},
           streamParams: {},
           returnType: _i1.MethodStreamReturnType.streamType,
@@ -148,7 +148,7 @@ class Endpoints extends _i1.EndpointDispatch {
             Map<String, Stream> streamParams,
           ) =>
               (endpoints['category'] as _i2.CategoryEndpoint)
-                  .watchCategories(session),
+                  .watchEvents(session),
         ),
       },
     );

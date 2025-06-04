@@ -2,47 +2,45 @@ import 'package:serverpod/serverpod.dart';
 import 'package:sync1_server/src/generated/protocol.dart';
 
 // Уникальное имя канала для сообщений о категориях
-const _categoryChannel = 'sync1_category_updates';
+const _categoryChannel = 'sync1_category_events';
 
 class CategoryEndpoint extends Endpoint {
   
-
-  /// Получает категории, измененные после указанного времени
-Future<List<Category>> getCategoriesSince(Session session, DateTime? since) async {
-  if (since == null) {
-    // Если since не указан, возвращаем все категории
-    return await getCategories(session);
-  }
-  
-  return await Category.db.find(
-    session,
-    where: (c) => c.lastModified>=since,
-    orderBy: (c) => c.lastModified,
-  );
-}
-
-  /// Отправляет уведомление всем подписчикам канала.
-  Future<void> _notifyChange(Session session, String changeType) async {
-    final message = Greeting(
-      message: changeType,
-      author: 'Server.CategoryEndpoint',
-      timestamp: DateTime.now(),
-    );
+  // Этот метод остается без изменений. Он нужен для "холодной" синхронизации.
+  Future<List<Category>> getCategoriesSince(Session session, DateTime? since) async {
+    if (since == null) {
+      return await getCategories(session);
+    }
     
+    return await Category.db.find(
+      session,
+      where: (c) => c.lastModified >= since,
+      orderBy: (c) => c.lastModified,
+    );
+  }
+
+  // --- ИЗМЕНЕНИЕ: Уведомление теперь отправляет конкретное событие ---
+  Future<void> _notifyChange(Session session, CategorySyncEvent event) async {
+    // Отправляем объект события в канал
     await session.messages.postMessage(
       _categoryChannel, 
-      message,
+      event,
     );
-    session.log('🔔 Уведомление отправлено в канал "$_categoryChannel": $changeType');
+    session.log('🔔 Событие отправлено в канал "$_categoryChannel": ${event.type.name}');
   }
 
    Future<Category> createCategory(Session session, Category category) async {
-    // Создаем копию объекта, но с серверным временем
     final serverCategory = category.copyWith(
       lastModified: DateTime.now().toUtc(),
     );
     await Category.db.insertRow(session, serverCategory);
-    await _notifyChange(session, 'CREATE');
+    
+    // --- ИЗМЕНЕНИЕ: Отправляем событие о создании ---
+    await _notifyChange(session, CategorySyncEvent(
+      type: SyncEventType.create,
+      category: serverCategory,
+    ));
+
     return serverCategory;
   }
 
@@ -59,12 +57,17 @@ Future<List<Category>> getCategoriesSince(Session session, DateTime? since) asyn
 
    Future<bool> updateCategory(Session session, Category category) async {
     try {
-      // Точно так же перезаписываем время при обновлении
       final serverCategory = category.copyWith(
         lastModified: DateTime.now().toUtc(),
       );
       await Category.db.updateRow(session, serverCategory);
-      await _notifyChange(session, 'UPDATE');
+      
+      // --- ИЗМЕНЕНИЕ: Отправляем событие об обновлении ---
+      await _notifyChange(session, CategorySyncEvent(
+        type: SyncEventType.update,
+        category: serverCategory,
+      ));
+
       return true;
     } catch (e) {
       session.log('❌ Ошибка обновления категории: $e');
@@ -81,7 +84,11 @@ Future<List<Category>> getCategoriesSince(Session session, DateTime? since) asyn
       );
       
       if (result.isNotEmpty) {
-        await _notifyChange(session, 'DELETE');
+        // --- ИЗМЕНЕНИЕ: Отправляем событие об удалении ---
+        await _notifyChange(session, CategorySyncEvent(
+          type: SyncEventType.delete,
+          id: id,
+        ));
       }
       
       return result.isNotEmpty;
@@ -91,19 +98,17 @@ Future<List<Category>> getCategoriesSince(Session session, DateTime? since) asyn
     }
   }
 
-  /// Production-ready real-time streaming (синтаксис Serverpod 2.x)
-  Stream<List<Category>> watchCategories(Session session) async* {
-    session.log('🟢 Клиент подписался на канал "$_categoryChannel"');
+  // --- ИЗМЕНЕНИЕ: Stream теперь отправляет события, а не весь список ---
+  // Название изменено на watchEvents для ясности
+  Stream<CategorySyncEvent> watchEvents(Session session) async* {
+    session.log('🟢 Клиент подписался на события в канале "$_categoryChannel"');
     
     try {
-      // 1. Сразу отправляем текущий список.
-      yield await getCategories(session);
-      
-      await for (var _ in session.messages.createStream(_categoryChannel)) {
-        session.log('🔄 Получено сообщение-триггер из Redis, отправляем обновленный список.');
-        
-        // При получении любого сообщения, просто заново запрашиваем и отдаем полный список.
-        yield await getCategories(session);
+      // Этот stream больше НЕ отправляет начальный список.
+      // Он только транслирует события, которые происходят ПОСЛЕ подписки.
+      await for (var event in session.messages.createStream<CategorySyncEvent>(_categoryChannel)) {
+        session.log('🔄 Получено событие, пересылаем клиенту: ${event.type.name}');
+        yield event;
       }
     } finally {
       session.log('🔴 Клиент отписался от канала "$_categoryChannel"');

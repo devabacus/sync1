@@ -12,9 +12,13 @@
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'greeting.dart' as _i2;
 import 'category.dart' as _i3;
-import 'package:sync1_client/src/protocol/category.dart' as _i4;
+import 'category_sync_event.dart' as _i4;
+import 'sync_event_type.dart' as _i5;
+import 'package:sync1_client/src/protocol/category.dart' as _i6;
 export 'greeting.dart';
 export 'category.dart';
+export 'category_sync_event.dart';
+export 'sync_event_type.dart';
 export 'client.dart';
 
 class Protocol extends _i1.SerializationManager {
@@ -36,14 +40,26 @@ class Protocol extends _i1.SerializationManager {
     if (t == _i3.Category) {
       return _i3.Category.fromJson(data) as T;
     }
+    if (t == _i4.CategorySyncEvent) {
+      return _i4.CategorySyncEvent.fromJson(data) as T;
+    }
+    if (t == _i5.SyncEventType) {
+      return _i5.SyncEventType.fromJson(data) as T;
+    }
     if (t == _i1.getType<_i2.Greeting?>()) {
       return (data != null ? _i2.Greeting.fromJson(data) : null) as T;
     }
     if (t == _i1.getType<_i3.Category?>()) {
       return (data != null ? _i3.Category.fromJson(data) : null) as T;
     }
-    if (t == List<_i4.Category>) {
-      return (data as List).map((e) => deserialize<_i4.Category>(e)).toList()
+    if (t == _i1.getType<_i4.CategorySyncEvent?>()) {
+      return (data != null ? _i4.CategorySyncEvent.fromJson(data) : null) as T;
+    }
+    if (t == _i1.getType<_i5.SyncEventType?>()) {
+      return (data != null ? _i5.SyncEventType.fromJson(data) : null) as T;
+    }
+    if (t == List<_i6.Category>) {
+      return (data as List).map((e) => deserialize<_i6.Category>(e)).toList()
           as T;
     }
     return super.deserialize<T>(data, t);
@@ -59,8 +75,11 @@ class Protocol extends _i1.SerializationManager {
     if (data is _i3.Category) {
       return 'Category';
     }
-    if (data is List<_i4.Category>) {
-      return 'List<Category>';
+    if (data is _i4.CategorySyncEvent) {
+      return 'CategorySyncEvent';
+    }
+    if (data is _i5.SyncEventType) {
+      return 'SyncEventType';
     }
     return null;
   }
@@ -77,8 +96,11 @@ class Protocol extends _i1.SerializationManager {
     if (dataClassName == 'Category') {
       return deserialize<_i3.Category>(data['data']);
     }
-    if (dataClassName == 'List<Category>') {
-      return deserialize<List<_i4.Category>>(data['data']);
+    if (dataClassName == 'CategorySyncEvent') {
+      return deserialize<_i4.CategorySyncEvent>(data['data']);
+    }
+    if (dataClassName == 'SyncEventType') {
+      return deserialize<_i5.SyncEventType>(data['data']);
     }
     return super.deserializeByClassName(data);
   }

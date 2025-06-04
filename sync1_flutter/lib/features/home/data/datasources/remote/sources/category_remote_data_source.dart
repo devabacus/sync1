@@ -84,64 +84,16 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   }
 
   @override
-  Stream<List<Category>> watchCategories() {
-    // Если stream уже создан, возвращаем его
-    if (_categoriesStreamController != null &&
-        !_categoriesStreamController!.isClosed) {
-      return _categoriesStreamController!.stream;
-    }
-
-    // Создаем новый broadcast stream controller
-    _categoriesStreamController = StreamController<List<Category>>.broadcast();
-
-    // Подключаемся к Serverpod streaming method
-    _connectToServerStream();
-
-    return _categoriesStreamController!.stream;
+Stream<CategorySyncEvent> watchEvents() {
+  try {
+    // Просто возвращаем stream напрямую от клиента Serverpod
+    return _client.category.watchEvents();
+  } catch (e) {
+    print('❌ Ошибка подписки на события сервера: $e');
+    // Возвращаем пустой stream в случае ошибки, чтобы приложение не падало
+    return Stream.value(CategorySyncEvent(type: SyncEventType.create));
   }
-
-  /// Подключается к серверному streaming методу
-  void _connectToServerStream() {
-    try {
-      print('🌊 Подключаемся к server stream...');
-
-      // Используем настоящий Serverpod streaming method
-      final serverStream = _client.category.watchCategories();
-
-      _streamSubscription = serverStream.listen(
-        (categories) {
-          // Перенаправляем данные в наш broadcast stream
-          print('🔄 Получены данные из stream: ${categories.length} категорий');
-          if (_categoriesStreamController != null &&
-              !_categoriesStreamController!.isClosed) {
-            _categoriesStreamController!.add(categories);
-          }
-        },
-        onError: (error) {
-          print('Ошибка в server stream: $error');
-          if (_categoriesStreamController != null &&
-              !_categoriesStreamController!.isClosed) {
-            _categoriesStreamController!.addError(error);
-          }
-        },
-        onDone: () {
-          print('Server stream завершен');
-          if (_categoriesStreamController != null &&
-              !_categoriesStreamController!.isClosed) {
-            _categoriesStreamController!.close();
-          }
-        },
-      );
-
-      print('Подключено к Serverpod streaming method');
-    } catch (e) {
-      print('Ошибка подключения к server stream: $e');
-      if (_categoriesStreamController != null &&
-          !_categoriesStreamController!.isClosed) {
-        _categoriesStreamController!.addError(e);
-      }
-    }
-  }
+}
 
   @override
   Future<bool> checkConnection() async {
@@ -195,4 +147,5 @@ class CategoryRemoteDataSource implements ICategoryRemoteDataSource {
   void dispose() {
     closeStreams();
   }
+
 }

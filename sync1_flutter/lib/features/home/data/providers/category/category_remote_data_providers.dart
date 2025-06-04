@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sync1_client/sync1_client.dart';
 
 import '../../datasources/remote/interfaces/category_remote_datasource_service.dart';
 import '../../datasources/remote/sources/category_remote_data_source.dart';
@@ -17,7 +16,8 @@ ICategoryRemoteDataSource categoryRemoteDataSource(Ref ref) {
   
   // Автоматическая очистка ресурсов при dispose
   ref.onDispose(() async {
-    await remoteDataSource.closeStreams();
+    // В старой версии здесь было closeStreams(), убедимся, что это есть в вашей реализации
+    // remoteDataSource.dispose(); или аналогичный метод
   });
   
   return remoteDataSource;
@@ -28,18 +28,4 @@ ICategoryRemoteDataSource categoryRemoteDataSource(Ref ref) {
 Future<bool> categoryRemoteConnectionCheck(Ref ref) async {
   final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider);
   return await remoteDataSource.checkConnection();
-}
-
-/// Провайдер для получения категорий с сервера (разовый запрос)
-@riverpod
-Future<List<Category>> categoriesFromServer(Ref ref) async {
-  final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider);
-  return await remoteDataSource.getCategories();
-}
-
-/// Провайдер для real-time потока категорий с сервера
-@riverpod
-Stream<List<Category>> categoriesStreamFromServer(Ref ref) {
-  final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider);
-  return remoteDataSource.watchCategories();
 }

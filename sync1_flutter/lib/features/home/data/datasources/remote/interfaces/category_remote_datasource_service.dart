@@ -23,7 +23,7 @@ abstract class ICategoryRemoteDataSource {
 
   /// Real-time поток всех категорий с сервера
   /// Основной метод для получения обновлений в реальном времени
-  Stream<List<Category>> watchCategories();
+  // Stream<List<Category>> watchCategories();
 
   /// Проверить подключение к серверу
   /// Полезно для определения online/offline статуса
@@ -37,5 +37,5 @@ abstract class ICategoryRemoteDataSource {
   /// Закрыть все активные stream подключения
   Future<void> closeStreams();
     Future<List<Category>> getCategoriesSince(DateTime? since); 
-
+  Stream<CategorySyncEvent> watchEvents();
 }
