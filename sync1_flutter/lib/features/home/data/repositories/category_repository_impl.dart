@@ -180,7 +180,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   Future<List<serverpod.Category>> _getServerChangesSince(DateTime? since) async {
     // ВАЖНО: Убедитесь, что ваш remoteDataSource имеет этот метод
     return await (_remoteDataSource as CategoryRemoteDataSource).getCategoriesSince(since);
-  }
+  }  
 
   Future<void> _syncLocalChangesToServer() async {
     final localChanges = await (_categoryDao.select(_categoryDao.categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.local.name))).get();
