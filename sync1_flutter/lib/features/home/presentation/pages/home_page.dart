@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/providers/category/category_usecase_providers.dart'; // Импортируем use cases
 import '../providers/category/category_state_providers.dart';
 import '../../domain/entities/category/category.dart';
+import '../../../../core/providers/session_manager_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -25,6 +26,32 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Проверяем, авторизован ли пользователь
+    final currentUser = ref.watch(currentUserProvider);
+    
+    if (currentUser == null) {
+      // Пользователь не авторизован - показываем сообщение
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Категории'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.login, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Пожалуйста, войдите в систему',
+                style: TextStyle(fontSize: 18),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Теперь мы слушаем наш новый StreamProvider
     final categoriesAsyncValue = ref.watch(categoriesStreamProvider);
 
@@ -32,6 +59,40 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text('Категории'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          // Добавляем информацию о пользователе и кнопку выхода
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                _logout();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'user_info',
+                enabled: false,
+                child: Text(
+                  currentUser.email ?? 'Пользователь',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout),
+                    SizedBox(width: 8),
+                    Text('Выйти'),
+                  ],
+                ),
+              ),
+            ],
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.account_circle),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -48,32 +109,52 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _addCategory() {
+  void _logout() async {
+    final sessionManager = ref.read(sessionManagerProvider);
+    await sessionManager.signOut();
+  }
+
+  void _addCategory() async {
     final title = _addCategoryController.text.trim();
     if (title.isEmpty) {
       _showSnackBar('Введите название категории', isError: true);
       return;
     }
 
+    // Получаем текущего пользователя
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser?.id == null) {
+      _showSnackBar('Ошибка: пользователь не авторизован', isError: true);
+      return;
+    }
+
     final category = CategoryEntity(
       id: const Uuid().v7(),
       title: title,
-      lastModified: DateTime.now().toUtc(), // <-- Добавили клиентское время
+      lastModified: DateTime.now().toUtc(),
+      userId: currentUser!.id!, // Используем ID текущего пользователя
     );
+
+    // Получаем use case
+    final createUseCase = ref.read(createCategoryUseCaseProvider);
+    if (createUseCase == null) {
+      _showSnackBar('Ошибка: сервис недоступен', isError: true);
+      return;
+    }
 
     // Вызываем use case напрямую. Notifier больше не нужен.
     // UI обновится автоматически, так как use case изменит данные в БД,
     // а StreamProvider это "услышит".
-    ref.read(createCategoryUseCaseProvider)(category).then((_) {
+    try {
+      await createUseCase(category);
       _addCategoryController.clear();
       _showSnackBar('Категория добавлена');
-    }).catchError((error) {
+    } catch (error) {
       _showSnackBar('Ошибка добавления: $error', isError: true);
-    });
+    }
   }
 
-  void _updateCategory(CategoryEntity category) {
-    
+  void _updateCategory(CategoryEntity category) async {
     final newTitle = _editCategoryController.text.trim();
     if (newTitle.isEmpty) {
       _showSnackBar('Введите название категории', isError: true);
@@ -87,26 +168,42 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final updatedCategory = category.copyWith(
       title: newTitle,
-      lastModified: DateTime.now().toUtc(), // <-- Добавили клиентское время
+      lastModified: DateTime.now().toUtc(),
     );
     
+    // Получаем use case
+    final updateUseCase = ref.read(updateCategoryUseCaseProvider);
+    if (updateUseCase == null) {
+      _showSnackBar('Ошибка: сервис недоступен', isError: true);
+      return;
+    }
+
     // Вызываем use case напрямую
-    ref.read(updateCategoryUseCaseProvider)(updatedCategory).then((_) {
+    try {
+      await updateUseCase(updatedCategory);
       Navigator.of(context).pop();
       _showSnackBar('Категория обновлена');
-    }).catchError((error) {
+    } catch (error) {
       _showSnackBar('Ошибка обновления: $error', isError: true);
-    });
+    }
   }
 
-  void _deleteCategory(CategoryEntity category) {
+  void _deleteCategory(CategoryEntity category) async {
+    // Получаем use case
+    final deleteUseCase = ref.read(deleteCategoryUseCaseProvider);
+    if (deleteUseCase == null) {
+      _showSnackBar('Ошибка: сервис недоступен', isError: true);
+      return;
+    }
+
     // Вызываем use case напрямую
-    ref.read(deleteCategoryUseCaseProvider)(category.id).then((_) {
+    try {
+      await deleteUseCase(category.id);
       Navigator.of(context).pop();
       _showSnackBar('Категория удалена');
-    }).catchError((error) {
+    } catch (error) {
       _showSnackBar('Ошибка удаления: $error', isError: true);
-    });
+    }
   }
   
   // ----- Остальная часть файла HomePage остается без изменений -----

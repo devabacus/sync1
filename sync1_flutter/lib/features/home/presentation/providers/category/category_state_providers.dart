@@ -9,7 +9,14 @@ part 'category_state_providers.g.dart';
 // при любых изменениях в таблице категорий в локальной БД.
 @riverpod
 Stream<List<CategoryEntity>> categoriesStream(Ref ref) {
+  final watchUseCase = ref.watch(watchCategoriesUseCaseProvider);
+  
+  // Если пользователь не авторизован, возвращаем пустой список
+  if (watchUseCase == null) {
+    return Stream.value(<CategoryEntity>[]);
+  }
+  
   // Мы просто "слушаем" use case, который возвращает stream.
   // Riverpod автоматически обработает подписку и отписку.
-  return ref.watch(watchCategoriesUseCaseProvider)();
+  return watchUseCase();
 }

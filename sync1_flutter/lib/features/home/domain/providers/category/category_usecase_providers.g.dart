@@ -7,12 +7,12 @@ part of 'category_usecase_providers.dart';
 // **************************************************************************
 
 String _$getCategoriesUseCaseHash() =>
-    r'f2be8a8c1acd621e48149b6bbd4e940dedc63b75';
+    r'08e20cd4a5ba6949a4751d9bffe0dac45e097cff';
 
 /// See also [getCategoriesUseCase].
 @ProviderFor(getCategoriesUseCase)
 final getCategoriesUseCaseProvider =
-    AutoDisposeProvider<GetCategoriesUseCase>.internal(
+    AutoDisposeProvider<GetCategoriesUseCase?>.internal(
       getCategoriesUseCase,
       name: r'getCategoriesUseCaseProvider',
       debugGetCreateSourceHash:
@@ -25,14 +25,14 @@ final getCategoriesUseCaseProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef GetCategoriesUseCaseRef = AutoDisposeProviderRef<GetCategoriesUseCase>;
+typedef GetCategoriesUseCaseRef = AutoDisposeProviderRef<GetCategoriesUseCase?>;
 String _$watchCategoriesUseCaseHash() =>
-    r'9d57c36f1f469c42321be8a7f7aee167f645a5b7';
+    r'338771c0b9eea8be51b0d4ce56db24f19d6b7b15';
 
 /// See also [watchCategoriesUseCase].
 @ProviderFor(watchCategoriesUseCase)
 final watchCategoriesUseCaseProvider =
-    AutoDisposeProvider<WatchCategoriesUseCase>.internal(
+    AutoDisposeProvider<WatchCategoriesUseCase?>.internal(
       watchCategoriesUseCase,
       name: r'watchCategoriesUseCaseProvider',
       debugGetCreateSourceHash:
@@ -46,14 +46,14 @@ final watchCategoriesUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef WatchCategoriesUseCaseRef =
-    AutoDisposeProviderRef<WatchCategoriesUseCase>;
+    AutoDisposeProviderRef<WatchCategoriesUseCase?>;
 String _$createCategoryUseCaseHash() =>
-    r'd0bbe2a34a65ef7f578a455aa97456a53bfccbfc';
+    r'ea47e1c8d7df3e7e90a382a9dac5269a2d9a3634';
 
 /// See also [createCategoryUseCase].
 @ProviderFor(createCategoryUseCase)
 final createCategoryUseCaseProvider =
-    AutoDisposeProvider<CreateCategoryUseCase>.internal(
+    AutoDisposeProvider<CreateCategoryUseCase?>.internal(
       createCategoryUseCase,
       name: r'createCategoryUseCaseProvider',
       debugGetCreateSourceHash:
@@ -67,14 +67,14 @@ final createCategoryUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CreateCategoryUseCaseRef =
-    AutoDisposeProviderRef<CreateCategoryUseCase>;
+    AutoDisposeProviderRef<CreateCategoryUseCase?>;
 String _$deleteCategoryUseCaseHash() =>
-    r'65ea4df41bebcd0b3fdbcd1d8912bf1a1e5b34a5';
+    r'120ba91e104a64d73fdac81e1aa734e82d8759da';
 
 /// See also [deleteCategoryUseCase].
 @ProviderFor(deleteCategoryUseCase)
 final deleteCategoryUseCaseProvider =
-    AutoDisposeProvider<DeleteCategoryUseCase>.internal(
+    AutoDisposeProvider<DeleteCategoryUseCase?>.internal(
       deleteCategoryUseCase,
       name: r'deleteCategoryUseCaseProvider',
       debugGetCreateSourceHash:
@@ -88,14 +88,14 @@ final deleteCategoryUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DeleteCategoryUseCaseRef =
-    AutoDisposeProviderRef<DeleteCategoryUseCase>;
+    AutoDisposeProviderRef<DeleteCategoryUseCase?>;
 String _$updateCategoryUseCaseHash() =>
-    r'2e8ae544ac932f26c8ecd020f257da37d0b36086';
+    r'c67b2a7dd53826305588c211dcba4adef97f3160';
 
 /// See also [updateCategoryUseCase].
 @ProviderFor(updateCategoryUseCase)
 final updateCategoryUseCaseProvider =
-    AutoDisposeProvider<UpdateCategoryUseCase>.internal(
+    AutoDisposeProvider<UpdateCategoryUseCase?>.internal(
       updateCategoryUseCase,
       name: r'updateCategoryUseCaseProvider',
       debugGetCreateSourceHash:
@@ -109,14 +109,14 @@ final updateCategoryUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef UpdateCategoryUseCaseRef =
-    AutoDisposeProviderRef<UpdateCategoryUseCase>;
+    AutoDisposeProviderRef<UpdateCategoryUseCase?>;
 String _$getCategoryByIdUseCaseHash() =>
-    r'6575d51af31188990ac9e264cc01d2b07ec10d0e';
+    r'61d9f0a09d1f7aa83ab3934896d71a4b06504537';
 
 /// See also [getCategoryByIdUseCase].
 @ProviderFor(getCategoryByIdUseCase)
 final getCategoryByIdUseCaseProvider =
-    AutoDisposeProvider<GetCategoryByIdUseCase>.internal(
+    AutoDisposeProvider<GetCategoryByIdUseCase?>.internal(
       getCategoryByIdUseCase,
       name: r'getCategoryByIdUseCaseProvider',
       debugGetCreateSourceHash:
@@ -130,6 +130,6 @@ final getCategoryByIdUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef GetCategoryByIdUseCaseRef =
-    AutoDisposeProviderRef<GetCategoryByIdUseCase>;
+    AutoDisposeProviderRef<GetCategoryByIdUseCase?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

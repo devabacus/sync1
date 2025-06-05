@@ -18,7 +18,12 @@ Future<CategoryEntity?> getCategoryById(Ref ref, String id) async {
   if (categoriesAsyncValue.hasValue) {
     final category = categoriesAsyncValue.value?.firstWhere(
       (cat) => cat.id == id,
-      orElse: () => CategoryEntity(id: 'NOT_FOUND', title: '', lastModified: DateTime.now(), userId: 0), // Временный объект, если не найдено
+      orElse: () => CategoryEntity(
+        id: 'NOT_FOUND', 
+        title: '', 
+        lastModified: DateTime.now(), 
+        userId: 0
+      ), // Временный объект, если не найдено
     );
     // Если нашли реальный объект, возвращаем его
     if (category != null && category.id != 'NOT_FOUND') {
@@ -27,6 +32,14 @@ Future<CategoryEntity?> getCategoryById(Ref ref, String id) async {
   }
   
   // Если в кеше нет или кеш еще не загружен, делаем прямой запрос к базе
-  final categoryFromDb = await ref.read(getCategoryByIdUseCaseProvider)(id);
+  final getCategoryByIdUseCase = ref.read(getCategoryByIdUseCaseProvider);
+  
+  // Проверяем, что use case доступен (пользователь авторизован)
+  if (getCategoryByIdUseCase == null) {
+    // Пользователь не авторизован
+    return null;
+  }
+  
+  final categoryFromDb = await getCategoryByIdUseCase(id);
   return categoryFromDb;
-} 
+}
