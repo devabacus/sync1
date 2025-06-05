@@ -139,7 +139,10 @@ class CategoryRepositoryImpl implements ICategoryRepository {
 
       print('🕒 Получаем полный список категорий с сервера для сверки...');
       final allServerCategories = await _remoteDataSource.getCategories();
-
+      print('ℹ️ Полный список с сервера содержит: ${allServerCategories.length} категорий.');
+      for (var cat in allServerCategories) {
+        print('  Server Cat ID: ${cat.id}, Title: ${cat.title}, UserID: ${cat.userId}');
+      }
       await _applyServerState(allServerCategories);
 
       print('✅ Ручная/восстановительная синхронизация завершена для пользователя $_userId');

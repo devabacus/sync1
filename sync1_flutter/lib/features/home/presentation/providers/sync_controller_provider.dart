@@ -36,6 +36,8 @@ class SyncController extends _$SyncController {
         
         if (repository != null) {
           // Вызываем наш метод синхронизации из репозитория
+                    print('SYNC_CONTROLLER: Вызов repository.syncWithServer() для пользователя...');
+
           await repository.syncWithServer();
           print('👍 Синхронизация успешно запущена.');
         } else {
@@ -67,5 +69,5 @@ class SyncController extends _$SyncController {
         print('❌ Ошибка во время ручной синхронизации: $e');
         rethrow;
       }
-  }
+  } 
 }
