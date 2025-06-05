@@ -16,6 +16,7 @@ void run(List<String> args) async {
     args,
     Protocol(),
     Endpoints(),
+    authenticationHandler: auth.authenticationHandler
   );
 
 

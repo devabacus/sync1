@@ -37,25 +37,6 @@ class Endpoints extends _i1.EndpointDispatch {
       name: 'category',
       endpoint: endpoints['category']!,
       methodConnectors: {
-        'getCategoriesSince': _i1.MethodConnector(
-          name: 'getCategoriesSince',
-          params: {
-            'since': _i1.ParameterDescription(
-              name: 'since',
-              type: _i1.getType<DateTime?>(),
-              nullable: true,
-            )
-          },
-          call: (
-            _i1.Session session,
-            Map<String, dynamic> params,
-          ) async =>
-              (endpoints['category'] as _i2.CategoryEndpoint)
-                  .getCategoriesSince(
-            session,
-            params['since'],
-          ),
-        ),
         'createCategory': _i1.MethodConnector(
           name: 'createCategory',
           params: {
@@ -73,6 +54,16 @@ class Endpoints extends _i1.EndpointDispatch {
             session,
             params['category'],
           ),
+        ),
+        'getCategories': _i1.MethodConnector(
+          name: 'getCategories',
+          params: {},
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['category'] as _i2.CategoryEndpoint)
+                  .getCategories(session),
         ),
         'getCategoryById': _i1.MethodConnector(
           name: 'getCategoryById',
@@ -92,15 +83,24 @@ class Endpoints extends _i1.EndpointDispatch {
             params['id'],
           ),
         ),
-        'getCategories': _i1.MethodConnector(
-          name: 'getCategories',
-          params: {},
+        'getCategoriesSince': _i1.MethodConnector(
+          name: 'getCategoriesSince',
+          params: {
+            'since': _i1.ParameterDescription(
+              name: 'since',
+              type: _i1.getType<DateTime?>(),
+              nullable: true,
+            )
+          },
           call: (
             _i1.Session session,
             Map<String, dynamic> params,
           ) async =>
               (endpoints['category'] as _i2.CategoryEndpoint)
-                  .getCategories(session),
+                  .getCategoriesSince(
+            session,
+            params['since'],
+          ),
         ),
         'updateCategory': _i1.MethodConnector(
           name: 'updateCategory',

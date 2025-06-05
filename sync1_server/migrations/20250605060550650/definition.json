@@ -25,6 +25,12 @@
           "columnType": 4,
           "isNullable": true,
           "dartType": "DateTime?"
+        },
+        {
+          "name": "userId",
+          "columnType": 6,
+          "isNullable": false,
+          "dartType": "int"
         }
       ],
       "foreignKeys": [],
@@ -1737,7 +1743,7 @@
   "installedModules": [
     {
       "module": "sync1",
-      "version": "20250604115157078"
+      "version": "20250605060550650"
     },
     {
       "module": "serverpod",

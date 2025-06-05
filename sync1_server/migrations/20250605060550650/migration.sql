@@ -35,7 +35,8 @@ volatile;
 CREATE TABLE "category" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid_v7(),
     "title" text NOT NULL,
-    "lastModified" timestamp without time zone
+    "lastModified" timestamp without time zone,
+    "userId" bigint NOT NULL
 );
 
 --
@@ -391,9 +392,9 @@ ALTER TABLE ONLY "serverpod_query_log"
 -- MIGRATION VERSION FOR sync1
 --
 INSERT INTO "serverpod_migrations" ("module", "version", "timestamp")
-    VALUES ('sync1', '20250604115157078', now())
+    VALUES ('sync1', '20250605060550650', now())
     ON CONFLICT ("module")
-    DO UPDATE SET "version" = '20250604115157078', "timestamp" = now();
+    DO UPDATE SET "version" = '20250605060550650', "timestamp" = now();
 
 --
 -- MIGRATION VERSION FOR serverpod

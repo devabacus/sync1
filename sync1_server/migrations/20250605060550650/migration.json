@@ -26,6 +26,12 @@
             "columnType": 4,
             "isNullable": true,
             "dartType": "DateTime?"
+          },
+          {
+            "name": "userId",
+            "columnType": 6,
+            "isNullable": false,
+            "dartType": "int"
           }
         ],
         "foreignKeys": [],

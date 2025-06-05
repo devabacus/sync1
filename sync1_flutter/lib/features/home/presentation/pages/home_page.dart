@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../data/providers/category/category_data_providers.dart';
 import '../../domain/providers/category/category_usecase_providers.dart'; // Импортируем use cases
 import '../providers/category/category_state_providers.dart';
 import '../../domain/entities/category/category.dart';
@@ -109,9 +110,38 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _logout() async {
+ void _logout() async {
     final sessionManager = ref.read(sessionManagerProvider);
-    await sessionManager.signOut();
+    final currentUser = ref.read(currentUserProvider); // Получаем ID пользователя ДО выхода
+
+    await sessionManager.signOutDevice();
+
+    if (currentUser?.id != null) {
+      try {
+        // Очищаем категории для этого пользователя
+        // Убедитесь, что categoryDaoProvider доступен или используйте databaseService
+        // для получения доступа к DAO или выполнения прямых запросов на удаление.
+        // Поскольку categoryDaoProvider зависит от currentUserCategoryRepositoryProvider,
+        // который станет null после выхода, лучше использовать более низкоуровневый доступ,
+        // например, через databaseService или создавая DAO напрямую с databaseService,
+        // если это возможно без userId в контексте DAO.
+        // Однако, самый простой способ - использовать существующий DAO, если он еще доступен
+        // или передать userId в метод очистки.
+
+        // Способ 1: Если у вас есть метод для удаления всех категорий пользователя в DAO
+        final categoryDao = ref.read(categoryDaoProvider); // Этот DAO не зависит от userId
+        await categoryDao.deleteAllCategories(userId: currentUser!.id!);
+        print('🧹 Локальные категории для пользователя ${currentUser.id} очищены.');
+
+        // Опционально: Очистка метаданных синхронизации, если они привязаны к пользователю
+        // final syncMetaDao = ref.read(syncMetadataDaoProvider);
+        // await syncMetaDao.clearAllSyncMetadataForUser(currentUser.id!); // Предполагая, что такой метод есть
+
+      } catch (e) {
+        print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
+      }
+    }
+    // Навигация или обновление UI после выхода
   }
 
   void _addCategory() async {

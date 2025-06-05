@@ -25,18 +25,18 @@ class EndpointCategory extends _i1.EndpointRef {
   @override
   String get name => 'category';
 
-  _i2.Future<List<_i3.Category>> getCategoriesSince(DateTime? since) =>
-      caller.callServerEndpoint<List<_i3.Category>>(
-        'category',
-        'getCategoriesSince',
-        {'since': since},
-      );
-
   _i2.Future<_i3.Category> createCategory(_i3.Category category) =>
       caller.callServerEndpoint<_i3.Category>(
         'category',
         'createCategory',
         {'category': category},
+      );
+
+  _i2.Future<List<_i3.Category>> getCategories() =>
+      caller.callServerEndpoint<List<_i3.Category>>(
+        'category',
+        'getCategories',
+        {},
       );
 
   _i2.Future<_i3.Category?> getCategoryById(_i4.UuidValue id) =>
@@ -46,11 +46,11 @@ class EndpointCategory extends _i1.EndpointRef {
         {'id': id},
       );
 
-  _i2.Future<List<_i3.Category>> getCategories() =>
+  _i2.Future<List<_i3.Category>> getCategoriesSince(DateTime? since) =>
       caller.callServerEndpoint<List<_i3.Category>>(
         'category',
-        'getCategories',
-        {},
+        'getCategoriesSince',
+        {'since': since},
       );
 
   _i2.Future<bool> updateCategory(_i3.Category category) =>
