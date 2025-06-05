@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../data/providers/category/category_data_providers.dart';
 import '../../domain/providers/category/category_usecase_providers.dart'; // Импортируем use cases
 import '../providers/category/category_state_providers.dart';
 import '../../domain/entities/category/category.dart';
@@ -109,9 +110,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _logout() async {
+void _logout() async {
     final sessionManager = ref.read(sessionManagerProvider);
-    await sessionManager.signOut();
+    final oldUserId = ref.read(currentUserProvider)?.id; // Получаем ID текущего пользователя ПЕРЕД выходом
+
+    await sessionManager.signOutDevice(); // Выходим из системы
+
+    if (oldUserId != null) {
+      ref.invalidate(categoryRepositoryProvider(oldUserId));
+      // Добавьте этот лог для подтверждения
+      print('🚪 ACTION: Инвалидирован categoryRepositoryProvider для старого пользователя $oldUserId');
+    }
   }
 
   void _addCategory() async {

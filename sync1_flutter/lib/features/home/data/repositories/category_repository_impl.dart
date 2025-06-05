@@ -37,56 +37,52 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     this._syncMetadataDao,
     this._userId, // Принимаем userId в конструкторе
   ) : _categoryDao = (_localDataSource as CategoryLocalDataSource).categoryDao {
+    print('✅ CategoryRepositoryImpl: Создан экземпляр для userId: $_userId');
     _initEventBasedSync();
   }
 
   void _initEventBasedSync() {
-    if (_isDisposed) return;
+  if (_isDisposed) return;
 
-    print('🌊 Попытка подписки на события сервера для пользователя $_userId... (попытка #${_reconnectionAttempt + 1})');
-    _eventStreamSubscription?.cancel();
+  print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${_reconnectionAttempt + 1}');
+  _eventStreamSubscription?.cancel(); // Отменяем предыдущую, если есть
 
-    _eventStreamSubscription = _remoteDataSource.watchEvents().listen(
-      (event) {
-        print('⚡️ Получено событие с сервера: ${event.type.name}');
-        if (_reconnectionAttempt > 0) {
-          print('👍 Соединение с real-time сервером восстановлено!');
-        }
-        _reconnectionAttempt = 0;
-        _handleSyncEvent(event);
-      },
-      onError: (error) {
-        print('❌ Ошибка стрима событий: $error. Планируем переподключение...');
-        _scheduleReconnection();
-      },
-      onDone: () {
-        print('🔌 Стрим событий был закрыт (onDone). Планируем переподключение...');
-        _scheduleReconnection();
-      },
-      cancelOnError: true,
-    );
-  }
-
-  void _scheduleReconnection() {
-    if (_isDisposed) return;
-    _eventStreamSubscription?.cancel();
-    final delaySeconds = min(pow(2, _reconnectionAttempt), 60).toInt();
-    print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
-
-    Future.delayed(Duration(seconds: delaySeconds), () {
-      _reconnectionAttempt++;
-      _initEventBasedSync();
+  if (_reconnectionAttempt == 0) { // Только для самой первой попытки
+    print('⏱️ Начальная задержка перед первой подпиской WebSocket для userId: $_userId...');
+    Future.delayed(const Duration(seconds: 2), () { // Задержка 2 секунды (можно настроить)
+      if (_isDisposed) return; // Проверка после задержки
+      _subscribeToEvents();
     });
+  } else {
+    _subscribeToEvents(); // Для повторных попыток (из _scheduleReconnection) - без доп. задержки
   }
+}
+
+ void _scheduleReconnection() {
+  if (_isDisposed) return;
+  _eventStreamSubscription?.cancel();
+  // Увеличим начальную задержку для теста, например, до 5 секунд
+  final delaySeconds = min(pow(2, _reconnectionAttempt).toInt(), 60);
+  print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
+
+  Future.delayed(Duration(seconds: delaySeconds), () {
+    _reconnectionAttempt++;
+    _initEventBasedSync();
+  });
+}
 
   @override
   void dispose() {
-    print('🛑 Уничтожение CategoryRepositoryImpl для пользователя $_userId. Отменяем все подписки.');
+    // ДОБАВЬТЕ ЭТОТ ЛОГ:
+    print('🛑 CategoryRepositoryImpl: Уничтожается экземпляр для userId: $_userId. _isDisposed до вызова: $_isDisposed');
     _isDisposed = true;
     _eventStreamSubscription?.cancel();
+    // ДОБАВЬТЕ ЭТОТ ЛОГ:
+    print('🛑 CategoryRepositoryImpl: Экземпляр для userId: $_userId УСПЕШНО УНИЧТОЖЕН. _isDisposed после вызова: $_isDisposed');
   }
 
   Future<void> _handleSyncEvent(serverpod.CategorySyncEvent event) async {
+    
     switch (event.type) {
       case serverpod.SyncEventType.create:
         if (event.category != null && event.category!.userId == _userId) {
@@ -152,49 +148,75 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   }
 
   Future<void> _applyServerState(List<serverpod.Category> serverCategories) async {
-    print('⚙️ Применение состояния сервера (${serverCategories.length} записей) для пользователя $_userId...');
-    try {
-      final localCategories = await _categoryDao.getCategories(userId: _userId);
-      final serverCategoriesMap = {
-        for (var c in serverCategories) c.id.toString(): c
-      };
-      final localCategoriesMap = {for (var c in localCategories) c.id: c};
-
-      await _categoryDao.db.transaction(() async {
-        final recordsToDelete = localCategoriesMap.values
-            .where((localCat) =>
-                !serverCategoriesMap.containsKey(localCat.id) &&
-                localCat.syncStatus == SyncStatus.synced &&
-                localCat.userId == _userId)
-            .map((localCat) => localCat.id)
-            .toList();
-
-        if (recordsToDelete.isNotEmpty) {
-          print('🗑️ Будет удалено ${recordsToDelete.length} записей, отсутствующих на сервере.');
-          for (final id in recordsToDelete) {
-            await _categoryDao.physicallyDeleteCategory(id, userId: _userId);
-          }
-        }
-
-        for (final serverCategory in serverCategories) {
-          if (serverCategory.userId == _userId) {
-            final localCategory = localCategoriesMap[serverCategory.id.toString()];
-
-            if (localCategory == null) {
-              await _insertServerCategory(serverCategory);
-            } else {
-              await _resolveConflict(localCategory, serverCategory);
-            }
-          }
-        }
-
-        await _syncMetadataDao.updateLastSyncTimestamp(_entityType, DateTime.now().toUtc());
-      });
-      print('✅ Состояние сервера успешно применено для пользователя $_userId.');
-    } catch (e, stackTrace) {
-      print('❌ КРИТИЧЕСКАЯ ОШИБКА применения состояния сервера для пользователя $_userId: $e\n$stackTrace');
-    }
+  print('⚙️ Применение состояния сервера (${serverCategories.length} записей) для пользователя $_userId...');
+  // Логируем все ID и названия категорий, пришедших с сервера (для отладки)
+  for (var sc in serverCategories) {
+    print('  серверная запись: ID=${sc.id}, Title=${sc.title}, UserID=${sc.userId}, LastModified=${sc.lastModified}');
   }
+
+  try {
+    final localCategories = await _categoryDao.getCategories(userId: _userId);
+    // Логируем все локальные ID, названия и статусы (для отладки)
+    print('  Локальных записей перед слиянием: ${localCategories.length}');
+    for (var lc in localCategories) {
+      print('  локальная запись: ID=${lc.id}, Title=${lc.title}, UserID=${lc.userId}, SyncStatus=${lc.syncStatus}, LastModified=${lc.lastModified}');
+    }
+
+    final serverCategoriesMap = {
+      for (var c in serverCategories) c.id.toString(): c
+    };
+    final localCategoriesMap = {for (var c in localCategories) c.id: c};
+
+    await _categoryDao.db.transaction(() async {
+      // Шаг 1: Удаляем локальные записи, которые были синхронизированы, но отсутствуют на сервере.
+      // Это обрабатывает случаи, когда запись была удалена на другом клиенте.
+      final recordsToDelete = localCategoriesMap.values
+          .where((localCat) =>
+              !serverCategoriesMap.containsKey(localCat.id) && // Нет на сервере
+              localCat.syncStatus == SyncStatus.synced &&      // Была синхронизирована (не локальное изменение/удаление)
+              localCat.userId == _userId)                      // Принадлежит текущему пользователю
+          .map((localCat) => localCat.id)
+          .toList();
+
+      if (recordsToDelete.isNotEmpty) {
+        print('🗑️ Будет физически удалено локально ${recordsToDelete.length} записей, отсутствующих на сервере (и бывших synced).');
+        for (final id in recordsToDelete) {
+          print('    Удаление ID: $id');
+          await _categoryDao.physicallyDeleteCategory(id, userId: _userId);
+        }
+      }
+
+      // Шаг 2: Обновляем или вставляем записи с сервера.
+      for (final serverCategory in serverCategories) {
+        // Убеждаемся, что обрабатываем только категории текущего пользователя (хотя getCategories на сервере должен это фильтровать)
+        if (serverCategory.userId == _userId) { 
+          print('  Обработка серверной категории: ID=${serverCategory.id}, Title=${serverCategory.title}');
+          final localCategoryData = localCategoriesMap[serverCategory.id.toString()];
+
+          if (localCategoryData == null) {
+            // Категория есть на сервере, но нет локально - вставляем.
+            print('    -> Локально не найдена. Будет создана как SyncStatus.synced.');
+            await _insertServerCategory(serverCategory);
+          } else {
+            // Категория есть и на сервере, и локально - разрешаем конфликт.
+            print('    -> Локально найдена (ID=${localCategoryData.id}, Title=${localCategoryData.title}, SyncStatus=${localCategoryData.syncStatus}). Разрешение конфликта.');
+            await _resolveConflict(localCategoryData, serverCategory);
+          }
+        } else {
+          // Этого не должно происходить, если серверный getCategories правильно фильтрует по userId
+          print('  ⚠️ Пропуск серверной категории: ID=${serverCategory.id}, Title=${serverCategory.title} - неверный userId ${serverCategory.userId} (ожидался $_userId)');
+        }
+      }
+
+      // Обновляем метку времени последней успешной полной синхронизации
+      await _syncMetadataDao.updateLastSyncTimestamp(_entityType, DateTime.now().toUtc());
+    });
+    print('✅ Состояние сервера успешно применено для пользователя $_userId.');
+  } catch (e, stackTrace) {
+    print('❌ КРИТИЧЕСКАЯ ОШИБКА применения состояния сервера для пользователя $_userId: $e\n$stackTrace');
+    // Здесь можно добавить более специфическую обработку ошибок, если это необходимо
+  }
+}
 
   Future<void> _insertServerCategory(serverpod.Category serverCategory) async {
     print('➕ Создана новая локальная запись с сервера: ${serverCategory.title}');
@@ -359,6 +381,34 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       return null;
     }
   }
+
+void _subscribeToEvents() {
+  if (_isDisposed) return;
+  print('🎧 CategoryRepositoryImpl: Выполняется подписка на события для userId: $_userId (попытка: ${_reconnectionAttempt})');
+
+  _eventStreamSubscription = _remoteDataSource.watchEvents().listen(
+    (event) {
+      print('⚡️ Получено событие с сервера: ${event.type.name} (для userId: $_userId)');
+      if (_reconnectionAttempt > 0) { // Сброс счетчика только при успешном получении данных
+        print('👍 Соединение с real-time сервером восстановлено для userId: $_userId!');
+        _reconnectionAttempt = 0; // Сбрасываем счетчик только при успешном событии
+      }
+      _handleSyncEvent(event);
+    },
+    onError: (error) {
+      print('❌ Ошибка стрима событий для userId: $_userId: $error. Планируем переподключение...');
+      // Не сбрасываем _reconnectionAttempt здесь
+      _scheduleReconnection();
+    },
+    onDone: () {
+      print('🔌 Стрим событий был закрыт (onDone) для userId: $_userId. Планируем переподключение...');
+      // Не сбрасываем _reconnectionAttempt здесь
+      _scheduleReconnection();
+    },
+    cancelOnError: true,
+  );
+}
+
 }
 
 extension on CategoryEntity {
@@ -380,3 +430,4 @@ extension on serverpod.Category {
         syncStatus: Value(status),
       );
 }
+
