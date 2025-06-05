@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../../../core/providers/session_manager_provider.dart';
 import '../../data/providers/category/category_data_providers.dart';
-import '../../data/providers/category/category_data_providers.dart';
+import '../../domain/entities/category/category.dart';
 import '../../domain/providers/category/category_usecase_providers.dart'; // Импортируем use cases
 import '../providers/category/category_state_providers.dart';
-import '../../domain/entities/category/category.dart';
-import '../../../../core/providers/session_manager_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -54,7 +54,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    // Теперь мы слушаем наш новый StreamProvider
     final categoriesAsyncValue = ref.watch(categoriesStreamProvider);
 
     return Scaffold(
@@ -113,15 +112,22 @@ class _HomePageState extends ConsumerState<HomePage> {
 
  void _logout() async {
     final sessionManager = ref.read(sessionManagerProvider);
-    final currentUser = ref.read(currentUserProvider); // Получаем ID пользователя ДО выхода
+    final currentUser = ref.read(currentUserProvider);
 
     await sessionManager.signOutDevice();
 
     if (currentUser?.id != null) {
       try {
-        final categoryDao = ref.read(categoryDaoProvider); // Этот DAO не зависит от userId
+        final categoryDao = ref.read(categoryDaoProvider);
+        final syncMetadataDao = ref.read(syncMetadataDaoProvider);
+        
+        // Очищаем категории пользователя
         await categoryDao.deleteAllCategories(userId: currentUser!.id!);
-        print('🧹 Локальные категории для пользователя ${currentUser.id} очищены.');
+        
+        // ВАЖНО: Очищаем метаданные синхронизации для категорий
+        await syncMetadataDao.clearSyncMetadata('categories');
+        
+        print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
 
       } catch (e) {
         print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');

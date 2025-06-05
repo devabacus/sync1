@@ -11,7 +11,6 @@ part 'category_state_providers.g.dart';
 Stream<List<CategoryEntity>> categoriesStream(Ref ref) {
   final watchUseCase = ref.watch(watchCategoriesUseCaseProvider);
   
-  // Если пользователь не авторизован, возвращаем пустой список
   if (watchUseCase == null) {
     return Stream.value(<CategoryEntity>[]);
   }
