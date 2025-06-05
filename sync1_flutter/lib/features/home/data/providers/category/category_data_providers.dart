@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../core/database/local/provider/database_provider.dart';
+import '../../../../../core/providers/session_manager_provider.dart';
 import '../../../domain/repositories/category_repository.dart';
 import '../../datasources/local/dao/category/category_dao.dart';
 import '../../datasources/local/dao/category/sync_metadata_dao.dart';
@@ -24,26 +25,44 @@ ICategoryLocalDataSource categoryLocalDataSource(Ref ref) {
   return CategoryLocalDataSource(categoryDao);
 }
 
+/// Семейный провайдер репозитория категорий для конкретного пользователя
+/// Каждый userId получает свой изолированный экземпляр репозитория
 @riverpod
-ICategoryRepository categoryRepository(Ref ref) {
+ICategoryRepository categoryRepository(Ref ref, int userId) {
   ref.keepAlive();
+  
   // Получаем все зависимости
   final localDataSource = ref.watch(categoryLocalDataSourceProvider);
   final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider);
   final syncMetadataDao = ref.watch(syncMetadataDaoProvider);
 
-  // Создаем репозиторий с передачей ref для доступа к провайдерам
+  // Создаем репозиторий с фиксированным userId
   final repository = CategoryRepositoryImpl(
     localDataSource, 
     remoteDataSource, 
     syncMetadataDao,
-    ref, // Передаем ref для доступа к currentUserProvider
+    userId, // Передаем userId в конструктор
   );
 
   // Убедимся, что при уничтожении провайдера подписка будет закрыта
   ref.onDispose(() => repository.dispose());
 
   return repository;
+}
+
+/// Удобный провайдер для получения репозитория текущего пользователя
+/// Автоматически следит за сменой пользователя и предоставляет соответствующий репозиторий
+@riverpod
+ICategoryRepository? currentUserCategoryRepository(Ref ref) {
+  final currentUser = ref.watch(currentUserProvider);
+  
+  if (currentUser?.id == null) {
+    // Если пользователь не авторизован, возвращаем null
+    return null;
+  }
+  
+  // Возвращаем репозиторий для текущего пользователя
+  return ref.watch(categoryRepositoryProvider(currentUser!.id!));
 }
 
 @riverpod
