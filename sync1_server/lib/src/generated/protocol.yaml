@@ -1,8 +1,8 @@
 category:
-  - getCategoriesSince:
   - createCategory:
-  - getCategoryById:
   - getCategories:
+  - getCategoryById:
+  - getCategoriesSince:
   - updateCategory:
   - deleteCategory:
   - watchEvents:
