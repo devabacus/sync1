@@ -113,12 +113,23 @@ class CategoryEndpoint extends Endpoint {
     final channel = '$_categoryChannelBase$userId';
     session.log('🟢 Клиент (user: $userId) подписался на события в канале "$channel"');
     try {
-      await for (var event in session.messages.createStream<CategorySyncEvent>(channel)) {
-        session.log('🔄 Пересылаем событие ${event.type.name} клиенту (user: $userId)');
-        yield event;
-      }
-    } finally {
-      session.log('🔴 Клиент (user: $userId) отписался от канала "$channel"');
+    await for (var event in session.messages.createStream<CategorySyncEvent>(channel)) {
+      session.log('🔄 Пересылаем событие ${event.type.name} клиенту (user: $userId)');
+      yield event;
     }
+  } finally {
+    // Попробуйте получить userId без падения, если сессия уже невалидна
+    int? finalUserId;
+    try {
+      finalUserId = await _getAuthenticatedUserId(session);
+    } catch (_) {
+      // Пользователь уже не аутентифицирован, это нормально при закрытии сессии
+    }
+    if (finalUserId != null) {
+         session.log('🔴 Клиент (user: $finalUserId) отписался от канала "$channel"');
+    } else {
+         session.log('🔴 Клиент (сессия недействительна) отписался от канала "$channel"');
+    }
+  }
   }
 }
