@@ -27,8 +27,11 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
       ..where((t) => userId != null ? t.userId.equals(userId) : const Constant(true)))
     .watch();
 
-  Future<CategoryTableData> getCategoryById(String id) =>
-      (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();
+  // Получить категорию по ID с проверкой принадлежности пользователю
+  Future<CategoryTableData> getCategoryById(String id, {required int userId}) =>
+      (select(categoryTable)
+        ..where((t) => t.id.equals(id) & t.userId.equals(userId)))
+      .getSingle();
 
   Future<String> createCategory(CategoryTableCompanion companion) async {
     if (!companion.id.present || companion.id.value.isEmpty) {
@@ -62,40 +65,47 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
-  Future<bool> updateCategory(CategoryTableCompanion category) async {
-    if (!category.id.present || category.id.value.isEmpty) {
-      throw ArgumentError(
-        'ID категории должен быть предоставлен для обновления',
-      );
+ // Предлагаемое изменение в CategoryDao
+Future<bool> updateCategory(CategoryTableCompanion companion, {required int userId}) async {
+    if (!companion.id.present || companion.id.value.isEmpty) {
+        throw ArgumentError('ID категории должен быть предоставлен для обновления');
     }
-
-    if (!category.title.present || category.title.value.trim().isEmpty) {
-      throw ArgumentError('Название категории не может быть пустым');
+    if (!companion.title.present || companion.title.value.trim().isEmpty) {
+        throw ArgumentError('Название категории не может быть пустым');
     }
+    // Дополнительно можно проверить, что companion.userId (если присутствует) совпадает с userId параметром,
+    // или просто не включать userId в companion, если он не меняется.
 
-    try {
-      final result = await update(categoryTable).replace(category);
-      return result;
-    } catch (e) {
-      print('Ошибка обновления категории: $e');
-      rethrow;
-    }
-  }
+    final idToUpdate = companion.id.value;
+    final updatedRows = await (update(categoryTable)
+      ..where((t) => t.id.equals(idToUpdate) & t.userId.equals(userId))) // Обновляем, только если ID и userId совпадают
+      .write(companion); // companion содержит обновляемые поля
+    return updatedRows > 0;
+}
 
-  Future<bool> softDeleteCategory(String id) async {
+  // Мягкое удаление с проверкой принадлежности пользователю
+  Future<bool> softDeleteCategory(String id, {required int userId}) async {
     if (id.isEmpty) {
       throw ArgumentError('ID категории не может быть пустым');
     }
+    
     final companion = CategoryTableCompanion(
       syncStatus: Value(SyncStatus.deleted),
       lastModified: Value(DateTime.now()), 
     );
-    final updatedRows = await (update(categoryTable)..where((t) => t.id.equals(id))).write(companion);
+    
+    final updatedRows = await (update(categoryTable)
+      ..where((t) => t.id.equals(id) & t.userId.equals(userId)))
+      .write(companion);
+    
     return updatedRows > 0;
   }
 
-  Future<int> physicallyDeleteCategory(String id) async {
-    return (delete(categoryTable)..where((t) => t.id.equals(id))).go();
+  // Физическое удаление с проверкой принадлежности пользователю
+  Future<int> physicallyDeleteCategory(String id, {required int userId}) async {
+    return (delete(categoryTable)
+      ..where((t) => t.id.equals(id) & t.userId.equals(userId)))
+      .go();
   }
 
   Future<bool> categoryExists(String id) async {

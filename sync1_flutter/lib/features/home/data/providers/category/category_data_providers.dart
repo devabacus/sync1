@@ -8,7 +8,7 @@ import '../../datasources/local/dao/category/sync_metadata_dao.dart';
 import '../../datasources/local/interfaces/category_local_datasource_service.dart';
 import '../../datasources/local/sources/category_local_data_source.dart';
 import '../../repositories/category_repository_impl.dart';
-import 'category_remote_data_providers.dart'; // <-- Наш новый импорт
+import 'category_remote_data_providers.dart';
 
 part 'category_data_providers.g.dart';
 
@@ -27,19 +27,22 @@ ICategoryLocalDataSource categoryLocalDataSource(Ref ref) {
 @riverpod
 ICategoryRepository categoryRepository(Ref ref) {
   ref.keepAlive();
-  // Получаем обе зависимости: локальную и удаленную
+  // Получаем все зависимости
   final localDataSource = ref.watch(categoryLocalDataSourceProvider);
-  final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider); // <-- Новая зависимость
-  final syncMetadataDao = ref.watch(syncMetadataDaoProvider); // <- Добавить
+  final remoteDataSource = ref.watch(categoryRemoteDataSourceProvider);
+  final syncMetadataDao = ref.watch(syncMetadataDaoProvider);
 
-
-   // Создаем репозиторий, который автоматически начнет слушать сервер
-  final repository = CategoryRepositoryImpl(localDataSource, remoteDataSource, syncMetadataDao);
+  // Создаем репозиторий с передачей ref для доступа к провайдерам
+  final repository = CategoryRepositoryImpl(
+    localDataSource, 
+    remoteDataSource, 
+    syncMetadataDao,
+    ref, // Передаем ref для доступа к currentUserProvider
+  );
 
   // Убедимся, что при уничтожении провайдера подписка будет закрыта
   ref.onDispose(() => repository.dispose());
 
-  // Передаем обе зависимости в конструктор
   return repository;
 }
 
@@ -48,4 +51,3 @@ SyncMetadataDao syncMetadataDao(Ref ref) {
   final databaseService = ref.read(databaseServiceProvider);
   return SyncMetadataDao(databaseService.database);
 }
-
