@@ -10,14 +10,14 @@ class CategoryLocalDataSource implements ICategoryLocalDataSource {
   CategoryLocalDataSource(this.categoryDao);
 
   @override
-  Future<List<CategoryModel>> getCategories() async {
-    final categories = await categoryDao.getCategories();
+  Future<List<CategoryModel>> getCategories({int? userId}) async {
+    final categories = await categoryDao.getCategories(userId: userId);
     return categories.toModels();
   }
 
   @override
-  Stream<List<CategoryModel>> watchCategories() {
-    return categoryDao.watchCategories().map((list) => list.toModels());
+  Stream<List<CategoryModel>> watchCategories({int? userId}) {
+    return categoryDao.watchCategories(userId: userId).map((list) => list.toModels());
   }
 
   @override
@@ -40,7 +40,4 @@ class CategoryLocalDataSource implements ICategoryLocalDataSource {
   Future<bool> deleteCategory(String id) async {
     return categoryDao.softDeleteCategory(id);
   }
-
 }
-
-  

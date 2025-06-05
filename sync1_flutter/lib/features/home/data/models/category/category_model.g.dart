@@ -11,6 +11,7 @@ _CategoryModel _$CategoryModelFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       title: json['title'] as String,
       lastModified: DateTime.parse(json['lastModified'] as String),
+      userId: (json['userId'] as num).toInt(),
     );
 
 Map<String, dynamic> _$CategoryModelToJson(_CategoryModel instance) =>
@@ -18,4 +19,5 @@ Map<String, dynamic> _$CategoryModelToJson(_CategoryModel instance) =>
       'id': instance.id,
       'title': instance.title,
       'lastModified': instance.lastModified.toIso8601String(),
+      'userId': instance.userId,
     };

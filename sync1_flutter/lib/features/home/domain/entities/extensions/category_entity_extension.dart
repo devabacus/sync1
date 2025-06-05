@@ -5,7 +5,8 @@ extension CategoryEntityExtension on CategoryEntity {
   CategoryModel toModel() => CategoryModel(
         id: id,
         title: title,
-        lastModified: lastModified, // <-- Добавили
+        lastModified: lastModified,
+        userId: userId,
       );
 }
 

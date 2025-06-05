@@ -8,13 +8,15 @@ extension CategoryModelExtension on CategoryModel {
   CategoryEntity toEntity() => CategoryEntity(
         id: id,
         title: title,
-        lastModified: lastModified, // <-- Добавили
+        lastModified: lastModified,
+        userId: userId,
       );
 
   CategoryTableCompanion toCompanion() => CategoryTableCompanion(
         id: Value(id),
         title: Value(title),
         lastModified: Value(lastModified), 
+        userId: Value(userId),
         syncStatus: Value(SyncStatus.local), // По умолчанию новые записи требуют синхронизации
 
       );

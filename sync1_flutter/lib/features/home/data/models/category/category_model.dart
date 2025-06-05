@@ -9,6 +9,7 @@ abstract class CategoryModel with _$CategoryModel {
     required String id,
     required String title,
     required DateTime lastModified,
+    required int userId,
   }) = _CategoryModel;
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) => _$CategoryModelFromJson(json);

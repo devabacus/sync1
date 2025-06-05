@@ -10,6 +10,7 @@ abstract class CategoryEntity with _$CategoryEntity {
     required String id,
 required String title,
 required DateTime lastModified,
+required int userId,
   }) = _CategoryEntity;
 
   factory CategoryEntity.fromJson(Map<String, dynamic> json) => _$CategoryEntityFromJson(json);

@@ -12,7 +12,7 @@ class CategoryTable extends Table {
   TextColumn get syncStatus => text().map(const SyncStatusConverter())();
   
   // Добавляем поле для хранения ID пользователя
-  IntColumn get userId => integer().nullable()();
+  IntColumn get userId => integer()();
   
   @override
   Set<Column> get primaryKey => {id};

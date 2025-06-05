@@ -13,13 +13,19 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
 
   AppDatabase get db => attachedDatabase;
 
-  // ИЗМЕНЕНИЕ: Исправлен синтаксис where-условия
-  Future<List<CategoryTableData>> getCategories() =>
-    (select(categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())).get();
+  // Получить все категории пользователя (исключая удаленные)
+  Future<List<CategoryTableData>> getCategories({int? userId}) =>
+    (select(categoryTable)
+      ..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())
+      ..where((t) => userId != null ? t.userId.equals(userId) : const Constant(true)))
+    .get();
 
-  // ИЗМЕНЕНИЕ: Исправлен синтаксис where-условия
-  Stream<List<CategoryTableData>> watchCategories() =>
-    (select(categoryTable)..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())).watch();
+  // Следить за изменениями категорий пользователя
+  Stream<List<CategoryTableData>> watchCategories({int? userId}) =>
+    (select(categoryTable)
+      ..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())
+      ..where((t) => userId != null ? t.userId.equals(userId) : const Constant(true)))
+    .watch();
 
   Future<CategoryTableData> getCategoryById(String id) =>
       (select(categoryTable)..where((t) => t.id.equals(id))).getSingle();
@@ -31,6 +37,10 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
 
     if (!companion.title.present || companion.title.value.trim().isEmpty) {
       throw ArgumentError('Название категории не может быть пустым');
+    }
+
+    if (!companion.userId.present) {
+      throw ArgumentError('userId должен быть указан при создании категории');
     }
 
     final id = companion.id.value;
@@ -72,22 +82,17 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
-   // ИЗМЕНЕНИЕ: Исправлен метод softDeleteCategory
   Future<bool> softDeleteCategory(String id) async {
     if (id.isEmpty) {
       throw ArgumentError('ID категории не может быть пустым');
     }
     final companion = CategoryTableCompanion(
-      // Мы не передаем id в companion для write, так как он будет в where
       syncStatus: Value(SyncStatus.deleted),
       lastModified: Value(DateTime.now()), 
     );
-    // Используем (update()..where()).write() для частичного обновления
     final updatedRows = await (update(categoryTable)..where((t) => t.id.equals(id))).write(companion);
-    // write возвращает количество измененных строк
     return updatedRows > 0;
   }
-
 
   Future<int> physicallyDeleteCategory(String id) async {
     return (delete(categoryTable)..where((t) => t.id.equals(id))).go();
@@ -103,21 +108,26 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     return category != null;
   }
 
-  Future<int> getCategoriesCount() async {
+  Future<int> getCategoriesCount({int? userId}) async {
     final countQuery = selectOnly(categoryTable)
-      ..addColumns([categoryTable.id.count()]);
+      ..addColumns([categoryTable.id.count()])
+      ..where(userId != null ? categoryTable.userId.equals(userId) : const Constant(true));
 
     final result = await countQuery.getSingle();
     return result.read(categoryTable.id.count()) ?? 0;
   }
 
-    Future<void> insertCategories(List<CategoryTableCompanion> companions) async {
+  Future<void> insertCategories(List<CategoryTableCompanion> companions) async {
     await batch((batch) {
       batch.insertAll(categoryTable, companions);
     });
   }
 
-  Future<int> deleteAllCategories() {
-    return delete(categoryTable).go();
+  Future<int> deleteAllCategories({int? userId}) {
+    if (userId != null) {
+      return (delete(categoryTable)..where((t) => t.userId.equals(userId))).go();
+    } else {
+      return delete(categoryTable).go();
+    }
   }
 }
