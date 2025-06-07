@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: serverpod-migration-job-db-only
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: timeweb-registry-secret
+      containers:
+      - name: migrator-db-only
+        image: dbe81550-wise-chickadee.registry.twcstorage.ru/sync1-server:latest
+        command: ["/usr/local/bin/server", "--apply-migrations", "--role", "maintenance"]
+        envFrom:
+        - configMapRef:
+            name: serverpod-config-job-only # <-- ИСПОЛЬЗУЕМ НОВЫЙ CONFIGMAP
+        env:
+        - name: SERVERPOD_DATABASE_PASSWORD # <-- ТОЛЬКО ПАРОЛЬ ОТ БД
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: database-password
+      restartPolicy: Never
+  backoffLimit: 1

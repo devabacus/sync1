@@ -33,7 +33,7 @@ Stream<UserInfo?> userInfoStream(Ref ref) {
   void listener() {
     if (!controller.isClosed) {
       controller.add(sessionManager.signedInUser);
-    }
+    } 
   }
   
   controller = StreamController<UserInfo?>(

@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: serverpod-migration-job
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: timeweb-registry-secret
+
+      containers:
+      - name: migrator
+        # Используем тот же самый образ, что и для основного приложения
+        image: dbe81550-wise-chickadee.registry.twcstorage.ru/sync1-server:latest
+        
+        # Передаем команду для запуска только миграций
+        command: ["/usr/local/bin/server", "--apply-migrations", "--role", "maintenance"]
+
+
+
+
+        # Подключаем те же самые настройки и секреты для доступа к БД
+        envFrom:
+        - configMapRef:
+            name: serverpod-config
+        env:
+        - name: SERVERPOD_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: database-password
+        - name: SERVERPOD_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: redis-password
+        - name: SERVERPOD_SERVICE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: service-secret
+      # Не перезапускать задачу, если она завершилась (успешно или с ошибкой)
+      restartPolicy: Never
+  # Количество попыток в случае ошибки
+  backoffLimit: 2

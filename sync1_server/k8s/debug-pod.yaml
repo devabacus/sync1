@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-connection-test
+spec:
+  containers:
+  - name: test-container
+    image: postgres:15 # Используем официальный образ postgres с утилитой psql
+    # Эта команда попытается подключиться и вывести список таблиц, а потом будет "спать"
+    command: ["/bin/sh", "-c"]
+    args:
+    - >
+      PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\\dt";
+      echo "---";
+      echo "If you see a list of tables above (or 'Did not find any relations'), connection is OK.";
+      echo "If you see a timeout or authentication error, there is a problem.";
+      echo "Pod will now sleep to allow for inspection.";
+      sleep 3600;
+    # Передаем переменные из тех же ConfigMap и Secret
+    env:
+    - name: DB_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: serverpod-config
+          key: SERVERPOD_DATABASE_HOST
+    - name: DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: serverpod-config
+          key: SERVERPOD_DATABASE_PORT
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: serverpod-config
+          key: SERVERPOD_DATABASE_USER
+    - name: DB_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: serverpod-config
+          key: SERVERPOD_DATABASE_NAME
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: serverpod-secrets
+          key: database-password
+  restartPolicy: Never

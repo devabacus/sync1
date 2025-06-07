@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sync1-server-deployment
+  labels:
+    app: sync1-server
+spec:
+  replicas: 1 # Начнем с одной копии приложения
+  selector:
+    matchLabels:
+      app: sync1-server
+  template:
+    metadata:
+      labels:
+        app: sync1-server
+    spec:
+      imagePullSecrets:
+      - name: timeweb-registry-secret
+
+      containers:
+      - name: sync1-server
+        # Указываем полный путь к нашему образу в реестре Timeweb
+        image: dbe81550-wise-chickadee.registry.twcstorage.ru/sync1-server:latest
+        command: ["/usr/local/bin/server", "--mode", "production", "--role", "monolith"]
+
+
+        imagePullPolicy: Always # Всегда проверять наличие новой версии образа
+
+        ports:
+        - containerPort: 8080 # API
+        - containerPort: 8081 # Insights
+        - containerPort: 8082 # Web
+
+        # --- Подключение настроек и секретов ---
+        envFrom:
+        - configMapRef:
+            name: serverpod-config # Наш ConfigMap
+        
+        # Здесь мы берем пароли из Secret и передаем их
+        # как переменные окружения, которые ожидает Serverpod
+        env:
+        - name: SERVERPOD_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets # Наш Secret
+              key: database-password # Ключ из Secret
+        - name: SERVERPOD_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: redis-password
+        - name: SERVERPOD_SERVICE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: serverpod-secrets
+              key: service-secret
+
+        # --- Проверки работоспособности ---
+        # Проверка готовности: Kubernetes не будет отправлять трафик на под, пока эта проверка не пройдет
+        readinessProbe:
+          httpGet:
+            path: / # Проверяем главную страницу веб-сервера
+            port: 8082
+          initialDelaySeconds: 20 # Начать проверку через 20 секунд после старта
+          periodSeconds: 15     # Повторять каждые 15 секунд
+
+        # Проверка "жизни": Kubernetes перезапустит под, если эта проверка не пройдет
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8082
+          initialDelaySeconds: 60 # Даем приложению минуту на полный запуск
+          periodSeconds: 30

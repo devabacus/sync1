@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: serverpod-config
+data:
+  # --- Настройки базы данных ---
+  # Имя хоста (адрес) вашей управляемой БД Postgres в Timeweb
+  # SERVERPOD_DATABASE_HOST: "5.129.199.253"
+  SERVERPOD_DATABASE_HOST: "192.168.0.6"
+  SERVERPOD_DATABASE_PORT: "5432" # Уточните порт в панели Timeweb
+  SERVERPOD_DATABASE_NAME: "default_db" # из файла server_data.yaml
+  SERVERPOD_DATABASE_USER: "gen_user" # из файла server_data.yaml
+  SERVERPOD_DATABASE_REQUIRE_SSL: "true" # Для управляемых БД обычно true, уточните
+
+  # --- Настройки Redis ---
+  SERVERPOD_REDIS_ENABLED: "true"
+  # Имя хоста (адрес) вашего управляемого Redis в Timeweb
+  # SERVERPOD_REDIS_HOST: "193.233.102.6"
+  SERVERPOD_REDIS_HOST: "192.168.0.7"
+  SERVERPOD_REDIS_PORT: "6379" # Уточните порт в панели Timeweb
+  SERVERPOD_REDIS_USER: "default"
+
+  # --- Настройки серверов (из production.yaml) ---
+  SERVERPOD_API_SERVER_PUBLIC_HOST: "api2.my-points.ru" #
+  SERVERPOD_API_SERVER_PUBLIC_PORT: "443" #
+  SERVERPOD_API_SERVER_PUBLIC_SCHEME: "https" #
+
+  SERVERPOD_WEB_SERVER_PUBLIC_HOST: "web2.my-points.ru" #
+  SERVERPOD_WEB_SERVER_PUBLIC_PORT: "443" #
+  SERVERPOD_WEB_SERVER_PUBLIC_SCHEME: "https" #
+
+  SERVERPOD_INSIGHTS_SERVER_PUBLIC_HOST: "insights2.my-points.ru" #
+  SERVERPOD_INSIGHTS_SERVER_PUBLIC_PORT: "443" #
+  SERVERPOD_INSIGHTS_SERVER_PUBLIC_SCHEME: "https" #
+
+  # --- Общие настройки ---
+  SERVERPOD_MAX_REQUEST_SIZE: "524288" #
+  SERVERPOD_LOGGING_MODE: "production" # Рекомендуемый режим для production

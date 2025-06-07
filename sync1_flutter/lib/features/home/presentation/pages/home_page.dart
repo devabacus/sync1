@@ -163,9 +163,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
 
-    // Вызываем use case напрямую. Notifier больше не нужен.
-    // UI обновится автоматически, так как use case изменит данные в БД,
-    // а StreamProvider это "услышит".
     try {
       await createUseCase(category);
       _addCategoryController.clear();
@@ -227,8 +224,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
   
-  // ----- Остальная часть файла HomePage остается без изменений -----
-  // ----- (методы _buildAddCategoryForm, _buildCategoriesList, и т.д.) -----
 
   Widget _buildAddCategoryForm() {
     return Card(
