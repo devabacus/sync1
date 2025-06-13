@@ -31,3 +31,4 @@ MigrationStrategy get migration => MigrationStrategy(
     );
   }
 }
+

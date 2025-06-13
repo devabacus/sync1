@@ -3,7 +3,7 @@ project:
   name: "sync1"
   
 server:
-  ip: "5.129.199.196"
+  ip: ""
   http_port: "80:80"
   https_port: "443:443"
   domain: "my-points.ru"
@@ -14,8 +14,15 @@ server:
   email: "frolprank@gmail.com"
   
 database:
-  name: "serverpod"
-  user: "postgres"  
+  host: "192.168.0.6"
+  port: "5432"
+  name: "sync1_db"
+  user: "sync1_user"  
+  
+reddis:
+  host: "192.168.0.7"
+  port: "6379"
+  user: "default"
   
 deployment:
   organization: "devabacus"

@@ -1,0 +1,18 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  # Запускаем под в определенном пространстве имен для порядка
+  namespace: default # Замените на свое, если нужно
+  name: pg-proxy-pod
+spec:
+  containers:
+  - name: socat-proxy
+    image: alpine/socat
+    args:
+      - "TCP-LISTEN:5432,fork,reuseaddr"
+      - "TCP:192.168.0.6:5432"
+    ports:
+      - name: postgres-port # Именуем порт для ясности
+        containerPort: 5432
+

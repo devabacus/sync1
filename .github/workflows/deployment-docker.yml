@@ -1,22 +1,11 @@
 
-name: Deploy to Docker
+
+name: Build and Deploy to Kubernetes
+
 on:
   push:
-    branches: [master]
+    branches: [ master ]
   workflow_dispatch:
-    inputs:
-      target:
-        description: "Target"
-        required: true
-        default: "production"
-        type: choice
-        options:
-          - "production"
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  GHCR_ORG: "devabacus"
 
 jobs:
   build-and-push-image:
@@ -24,145 +13,97 @@ jobs:
     permissions:
       contents: read
       packages: write
-    defaults:
-      run:
-        working-directory: ./sync1_server
+    outputs:
+      tag: ${{ steps.meta.outputs.version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ secrets.REGISTRY_DOMAIN }}/sync1-server
+          tags: |
+            type=sha,prefix=,format=short
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Log in to Timeweb Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_DOMAIN }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          build-args: |
-            GITHUB_PAT=${{ secrets.PAT_GITHUB }}
-            GITHUB_USER=${{ secrets.PAT_USER_GITHUB }}
           context: ./sync1_server
           file: ./sync1_server/Dockerfile.prod
           push: true
-          tags: ghcr.io/${{ env.GHCR_ORG }}/sync1_server:latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # This determines which hardware platforms the image will run on
-          # further details: https://docs.docker.com/build/building/multi-platform/
-          platforms: linux/amd64, linux/arm/v7, linux/arm64/v8
 
-  deploy:
+  deploy-to-cluster:
     needs: build-and-push-image
-    name: deploy to production
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install ssh keys
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Add SSH key to the agent
-        run: |
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-
-      - name: Test SSH Connection
-        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo SSH connection successful"
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
+      - name: Set up Kubeconfig
+        uses: azure/k8s-set-context@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-      - name: List files in the directory
-        run: ls -la ./sync1_server/
-
-      - name: Run docker-compose
+      - name: Create or Update Image Pull Secret
         run: |
-          docker compose -f ./sync1_server/docker-compose.production.yaml pull
-          docker compose -f ./sync1_server/docker-compose.production.yaml up -d
+          kubectl create secret docker-registry timeweb-registry-secret             --docker-server=${{ secrets.REGISTRY_DOMAIN }}             --docker-username=${{ secrets.REGISTRY_USER }}             --docker-password=${{ secrets.REGISTRY_PASSWORD }}             --docker-email=frolprank@gmail.com             --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or Update Kubernetes Secret for Serverpod
+        run: |
+          kubectl create secret generic serverpod-secrets-sync1             --from-literal=database-password='${{ secrets.DB_PASSWORD }}'             --from-literal=redis-password='${{ secrets.REDIS_PASSWORD }}'             --from-literal=service-secret='${{ secrets.SERVICE_SECRET }}'             --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Update manifests with new image tag
         env:
-          DOCKER_HOST: "ssh://${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          # The database name
-          POSTGRES_DB: ${{ secrets.SERVERPOD_DATABASE_NAME }}
-          # The user name for the database
-          POSTGRES_USER: ${{ secrets.SERVERPOD_DATABASE_USER }}
-          # The password for the database
-          POSTGRES_PASSWORD: ${{ secrets.SERVERPOD_DATABASE_PASSWORD }}
-          # The database name
-          REDIS_PASSWORD: ${{ secrets.REDIS_PRODUCTION_PASSWORD }}
+            REGISTRY_DOMAIN: ${{ secrets.REGISTRY_DOMAIN }}
+            IMAGE_TAG: ${{ needs.build-and-push-image.outputs.tag }}
+        run: |
+          echo "Updating manifests with image tag: $IMAGE_TAG"
 
-          SERVERPOD_DATABASE_NAME: ${{ secrets.SERVERPOD_DATABASE_NAME }}
-          # The user name for the database
-          SERVERPOD_DATABASE_USER: ${{ secrets.SERVERPOD_DATABASE_USER }}
-          # The password for the database
-          SERVERPOD_DATABASE_PASSWORD: ${{ secrets.SERVERPOD_DATABASE_PASSWORD }}
-          # The public host address of the API server
-          SERVERPOD_API_SERVER_PUBLIC_HOST: ${{ secrets.SERVERPOD_API_SERVER_PUBLIC_HOST }}
-          # The public port number for the API server, 443 for https
-          SERVERPOD_API_SERVER_PUBLIC_PORT: 443
-          # This is the internal port number for the API server
-          SERVERPOD_API_SERVER_PORT: 8080
-          # The public scheme (http/https) for the API server
-          SERVERPOD_API_SERVER_PUBLIC_SCHEME: "https"
-          # The public host address of the Insights server
-          SERVERPOD_INSIGHTS_SERVER_PUBLIC_HOST: ${{ secrets.SERVERPOD_INSIGHTS_SERVER_PUBLIC_HOST }}
-          # The public port number for the Insights server
-          SERVERPOD_INSIGHTS_SERVER_PUBLIC_PORT: 443
-          # This is the internal port number for the Insights server
-          SERVERPOD_INSIGHTS_SERVER_PORT: 8081
-          # The public scheme (http/https) for the Insights server
-          SERVERPOD_INSIGHTS_SERVER_PUBLIC_SCHEME: "https"
-          # The public host address of the Web server
-          SERVERPOD_WEB_SERVER_PUBLIC_HOST: ${{ secrets.SERVERPOD_WEB_SERVER_PUBLIC_HOST }}
-          # The public port number for the Web server
-          SERVERPOD_WEB_SERVER_PUBLIC_PORT: 443
-          # This is the internal port number for the Web server
-          SERVERPOD_WEB_SERVER_PORT: 8082
-          # The public scheme (http/https) for the Web server
-          SERVERPOD_WEB_SERVER_PUBLIC_SCHEME: "https"
-          # The host address of the database
-          # This is hardcoded since the connection is done internally through
-          # the docker network. If you want to have access from the outside, you
-          # need to connect to your server with ssh
-          SERVERPOD_DATABASE_HOST: postgres
-          # The port number for the database connection
-          # If you need to change this port, you will also have to adjust
-          # postgres configuration in the docker-compose.production.yaml file
-          SERVERPOD_DATABASE_PORT: 5432
-          # Indicates if SSL is required for the database
-          # Set to false since it is behind the firewall and the database can
-          # only be accessed by utilizing the SSH tunnel
-          SERVERPOD_DATABASE_REQUIRE_SSL: false
-          # Specifies if the database connection is a Unix socket
-          SERVERPOD_DATABASE_IS_UNIX_SOCKET: false
-          # Redis is not required for this setup
-          # Disabled since right if supplying any of the redis settings, you
-          # MUST supply all of them, otherwise serverpod will fail to start
-          # SERVERPOD_REDIS_ENABLED: false
-          # The maximum size of requests allowed in bytes
-          SERVERPOD_MAX_REQUEST_SIZE: ${{ secrets.SERVERPOD_MAX_REQUEST_SIZE }}
-          # The token used to connect with insights must be at least 20 chars
-          SERVERPOD_SERVICE_SECRET: ${{ secrets.SERVERPOD_SERVICE_SECRET }}
+          # Команда замены
+          sed -i "s|^\(\s*image:\s*\).*$|\1${REGISTRY_DOMAIN}/sync1-server:${IMAGE_TAG}|" sync1_server/k8s/deployment.yaml
+          sed -i "s|^\(\s*image:\s*\).*$|\1${REGISTRY_DOMAIN}/sync1-server:${IMAGE_TAG}|" sync1_server/k8s/job.yaml
+          
+          echo "Updated deployment image:"
+          grep "image:" sync1_server/k8s/deployment.yaml
+          echo "Updated job image:"
+          grep "image:" sync1_server/k8s/job.yaml
+      - name: Apply infrastructure manifests
+        run: |
+          kubectl apply -f sync1_server/k8s/configmap.yaml
+          kubectl apply -f sync1_server/k8s/service.yaml
+          kubectl apply -f sync1_server/k8s/ingress.yaml
 
-      - name: cleanup
-        run: rm -rf ~/.ssh
+      - name: Run database migration
+        run: |
+          # Удаляем старую миграцию и запускаем новую
+          kubectl delete job serverpod-migration-job-sync1 --ignore-not-found=true
+          kubectl apply -f sync1_server/k8s/job.yaml
+          
+          # Ждем завершения миграции
+          kubectl wait --for=condition=complete job/serverpod-migration-job-sync1 --timeout=5m
 
+      - name: Deploy main application
+        run: |
+          kubectl apply -f sync1_server/k8s/deployment.yaml
+          kubectl rollout status deployment/sync1-server-deployment --timeout=3m
+          
+          # Показываем финальный статус
+          kubectl get pods -l app=sync1-server
+    
     

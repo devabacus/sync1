@@ -17,7 +17,8 @@ import 'dart:async' as _i3;
 import 'package:sync1_server/src/generated/category.dart' as _i4;
 import 'package:uuid/uuid_value.dart' as _i5;
 import 'package:sync1_server/src/generated/category_sync_event.dart' as _i6;
-import 'package:sync1_server/src/generated/greeting.dart' as _i7;
+import 'package:sync1_server/src/generated/test_data.dart' as _i7;
+import 'package:sync1_server/src/generated/greeting.dart' as _i8;
 import 'package:sync1_server/src/generated/protocol.dart';
 import 'package:sync1_server/src/generated/endpoints.dart';
 export 'package:serverpod_test/serverpod_test_public_exports.dart';
@@ -104,6 +105,8 @@ void withServerpod(
 class TestEndpoints {
   late final _CategoryEndpoint category;
 
+  late final _TestDataEndpoint testData;
+
   late final _GreetingEndpoint greeting;
 }
 
@@ -115,6 +118,10 @@ class _InternalTestEndpoints extends TestEndpoints
     _i2.EndpointDispatch endpoints,
   ) {
     category = _CategoryEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    testData = _TestDataEndpoint(
       endpoints,
       serializationManager,
     );
@@ -339,6 +346,131 @@ class _CategoryEndpoint {
   }
 }
 
+class _TestDataEndpoint {
+  _TestDataEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _i2.EndpointDispatch _endpointDispatch;
+
+  final _i2.SerializationManager _serializationManager;
+
+  _i3.Future<_i7.TestData> createTestData(
+    _i1.TestSessionBuilder sessionBuilder,
+    _i7.TestData testData,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+        endpoint: 'testData',
+        method: 'createTestData',
+      );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'testData',
+          methodName: 'createTestData',
+          parameters: _i1.testObjectToJson({'testData': testData}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue = await (_localCallContext.method.call(
+          _localUniqueSession,
+          _localCallContext.arguments,
+        ) as _i3.Future<_i7.TestData>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _i3.Future<List<_i7.TestData>> listTestDatas(
+      _i1.TestSessionBuilder sessionBuilder) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+        endpoint: 'testData',
+        method: 'listTestDatas',
+      );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'testData',
+          methodName: 'listTestDatas',
+          parameters: _i1.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue = await (_localCallContext.method.call(
+          _localUniqueSession,
+          _localCallContext.arguments,
+        ) as _i3.Future<List<_i7.TestData>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _i3.Future<_i7.TestData> updateTestData(
+    _i1.TestSessionBuilder sessionBuilder,
+    _i7.TestData testData,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+        endpoint: 'testData',
+        method: 'updateTestData',
+      );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'testData',
+          methodName: 'updateTestData',
+          parameters: _i1.testObjectToJson({'testData': testData}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue = await (_localCallContext.method.call(
+          _localUniqueSession,
+          _localCallContext.arguments,
+        ) as _i3.Future<_i7.TestData>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _i3.Future<bool> deleteTestData(
+    _i1.TestSessionBuilder sessionBuilder,
+    _i7.TestData testData,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+        endpoint: 'testData',
+        method: 'deleteTestData',
+      );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'testData',
+          methodName: 'deleteTestData',
+          parameters: _i1.testObjectToJson({'testData': testData}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue = await (_localCallContext.method.call(
+          _localUniqueSession,
+          _localCallContext.arguments,
+        ) as _i3.Future<bool>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _GreetingEndpoint {
   _GreetingEndpoint(
     this._endpointDispatch,
@@ -349,7 +481,7 @@ class _GreetingEndpoint {
 
   final _i2.SerializationManager _serializationManager;
 
-  _i3.Future<_i7.Greeting> hello(
+  _i3.Future<_i8.Greeting> hello(
     _i1.TestSessionBuilder sessionBuilder,
     String name,
   ) async {
@@ -370,7 +502,7 @@ class _GreetingEndpoint {
         var _localReturnValue = await (_localCallContext.method.call(
           _localUniqueSession,
           _localCallContext.arguments,
-        ) as _i3.Future<_i7.Greeting>);
+        ) as _i3.Future<_i8.Greeting>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

@@ -6,5 +6,10 @@ category:
   - updateCategory:
   - deleteCategory:
   - watchEvents:
+testData:
+  - createTestData:
+  - listTestDatas:
+  - updateTestData:
+  - deleteTestData:
 greeting:
   - hello:

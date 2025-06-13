@@ -1,0 +1,23 @@
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    # URL производственного сервера Let's Encrypt
+    server: https://acme-v02.api.letsencrypt.org/directory
+    
+    # Email для уведомлений от Let's Encrypt (например, о скором истечении срока действия сертификата)
+    email: frolprank@gmail.com
+    
+    # Имя секрета, в котором будет храниться приватный ключ вашей ACME-учетной записи
+    privateKeySecretRef:
+      name: letsencrypt-prod-private-key
+
+    # Указываем, как решать "задачи" от Let's Encrypt для подтверждения владения доменом
+    solvers:
+    - http01:
+        ingress:
+          # Очень важная строка: говорим cert-manager'у использовать ваш Ingress-контроллер
+          class: nginx

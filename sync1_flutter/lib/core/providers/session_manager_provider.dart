@@ -35,7 +35,7 @@ Stream<UserInfo?> userInfoStream(Ref ref) {
       controller.add(sessionManager.signedInUser);
     } 
   }
-  
+           
   controller = StreamController<UserInfo?>(
     onListen: () {
       // Отправляем текущее состояние сразу

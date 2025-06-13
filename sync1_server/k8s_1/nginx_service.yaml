@@ -1,0 +1,29 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  # Важно: имя и namespace должны соответствовать контроллеру
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+spec:
+  # Эта строка говорит облаку Timeweb выделить внешний IP-адрес
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: "1.12.1"
+    controller-revision-hash: 55bbc9f9bd
+    helm.sh/chart: ingress-nginx-4.12.1
+    pod-template-generation: "1"

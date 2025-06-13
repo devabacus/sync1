@@ -11,10 +11,12 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
 import '../endpoints/category_endpoint.dart' as _i2;
-import '../greeting_endpoint.dart' as _i3;
-import 'package:sync1_server/src/generated/category.dart' as _i4;
-import 'package:uuid/uuid_value.dart' as _i5;
-import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i6;
+import '../endpoints/test_data_endpoint.dart' as _i3;
+import '../greeting_endpoint.dart' as _i4;
+import 'package:sync1_server/src/generated/category.dart' as _i5;
+import 'package:uuid/uuid_value.dart' as _i6;
+import 'package:sync1_server/src/generated/test_data.dart' as _i7;
+import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i8;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -26,7 +28,13 @@ class Endpoints extends _i1.EndpointDispatch {
           'category',
           null,
         ),
-      'greeting': _i3.GreetingEndpoint()
+      'testData': _i3.TestDataEndpoint()
+        ..initialize(
+          server,
+          'testData',
+          null,
+        ),
+      'greeting': _i4.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
@@ -42,7 +50,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'category': _i1.ParameterDescription(
               name: 'category',
-              type: _i1.getType<_i4.Category>(),
+              type: _i1.getType<_i5.Category>(),
               nullable: false,
             )
           },
@@ -70,7 +78,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'id': _i1.ParameterDescription(
               name: 'id',
-              type: _i1.getType<_i5.UuidValue>(),
+              type: _i1.getType<_i6.UuidValue>(),
               nullable: false,
             )
           },
@@ -107,7 +115,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'category': _i1.ParameterDescription(
               name: 'category',
-              type: _i1.getType<_i4.Category>(),
+              type: _i1.getType<_i5.Category>(),
               nullable: false,
             )
           },
@@ -125,7 +133,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'id': _i1.ParameterDescription(
               name: 'id',
-              type: _i1.getType<_i5.UuidValue>(),
+              type: _i1.getType<_i6.UuidValue>(),
               nullable: false,
             )
           },
@@ -153,6 +161,76 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
       },
     );
+    connectors['testData'] = _i1.EndpointConnector(
+      name: 'testData',
+      endpoint: endpoints['testData']!,
+      methodConnectors: {
+        'createTestData': _i1.MethodConnector(
+          name: 'createTestData',
+          params: {
+            'testData': _i1.ParameterDescription(
+              name: 'testData',
+              type: _i1.getType<_i7.TestData>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['testData'] as _i3.TestDataEndpoint).createTestData(
+            session,
+            params['testData'],
+          ),
+        ),
+        'listTestDatas': _i1.MethodConnector(
+          name: 'listTestDatas',
+          params: {},
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['testData'] as _i3.TestDataEndpoint)
+                  .listTestDatas(session),
+        ),
+        'updateTestData': _i1.MethodConnector(
+          name: 'updateTestData',
+          params: {
+            'testData': _i1.ParameterDescription(
+              name: 'testData',
+              type: _i1.getType<_i7.TestData>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['testData'] as _i3.TestDataEndpoint).updateTestData(
+            session,
+            params['testData'],
+          ),
+        ),
+        'deleteTestData': _i1.MethodConnector(
+          name: 'deleteTestData',
+          params: {
+            'testData': _i1.ParameterDescription(
+              name: 'testData',
+              type: _i1.getType<_i7.TestData>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['testData'] as _i3.TestDataEndpoint).deleteTestData(
+            session,
+            params['testData'],
+          ),
+        ),
+      },
+    );
     connectors['greeting'] = _i1.EndpointConnector(
       name: 'greeting',
       endpoint: endpoints['greeting']!,
@@ -170,13 +248,13 @@ class Endpoints extends _i1.EndpointDispatch {
             _i1.Session session,
             Map<String, dynamic> params,
           ) async =>
-              (endpoints['greeting'] as _i3.GreetingEndpoint).hello(
+              (endpoints['greeting'] as _i4.GreetingEndpoint).hello(
             session,
             params['name'],
           ),
         )
       },
     );
-    modules['serverpod_auth'] = _i6.Endpoints()..initializeEndpoints(server);
+    modules['serverpod_auth'] = _i8.Endpoints()..initializeEndpoints(server);
   }
 }

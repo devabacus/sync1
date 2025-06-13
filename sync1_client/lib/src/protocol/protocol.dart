@@ -14,12 +14,15 @@ import 'greeting.dart' as _i2;
 import 'category.dart' as _i3;
 import 'category_sync_event.dart' as _i4;
 import 'sync_event_type.dart' as _i5;
-import 'package:sync1_client/src/protocol/category.dart' as _i6;
-import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i7;
+import 'test_data.dart' as _i6;
+import 'package:sync1_client/src/protocol/category.dart' as _i7;
+import 'package:sync1_client/src/protocol/test_data.dart' as _i8;
+import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i9;
 export 'greeting.dart';
 export 'category.dart';
 export 'category_sync_event.dart';
 export 'sync_event_type.dart';
+export 'test_data.dart';
 export 'client.dart';
 
 class Protocol extends _i1.SerializationManager {
@@ -47,6 +50,9 @@ class Protocol extends _i1.SerializationManager {
     if (t == _i5.SyncEventType) {
       return _i5.SyncEventType.fromJson(data) as T;
     }
+    if (t == _i6.TestData) {
+      return _i6.TestData.fromJson(data) as T;
+    }
     if (t == _i1.getType<_i2.Greeting?>()) {
       return (data != null ? _i2.Greeting.fromJson(data) : null) as T;
     }
@@ -59,12 +65,19 @@ class Protocol extends _i1.SerializationManager {
     if (t == _i1.getType<_i5.SyncEventType?>()) {
       return (data != null ? _i5.SyncEventType.fromJson(data) : null) as T;
     }
-    if (t == List<_i6.Category>) {
-      return (data as List).map((e) => deserialize<_i6.Category>(e)).toList()
+    if (t == _i1.getType<_i6.TestData?>()) {
+      return (data != null ? _i6.TestData.fromJson(data) : null) as T;
+    }
+    if (t == List<_i7.Category>) {
+      return (data as List).map((e) => deserialize<_i7.Category>(e)).toList()
+          as T;
+    }
+    if (t == List<_i8.TestData>) {
+      return (data as List).map((e) => deserialize<_i8.TestData>(e)).toList()
           as T;
     }
     try {
-      return _i7.Protocol().deserialize<T>(data, t);
+      return _i9.Protocol().deserialize<T>(data, t);
     } on _i1.DeserializationTypeNotFoundException catch (_) {}
     return super.deserialize<T>(data, t);
   }
@@ -85,7 +98,10 @@ class Protocol extends _i1.SerializationManager {
     if (data is _i5.SyncEventType) {
       return 'SyncEventType';
     }
-    className = _i7.Protocol().getClassNameForObject(data);
+    if (data is _i6.TestData) {
+      return 'TestData';
+    }
+    className = _i9.Protocol().getClassNameForObject(data);
     if (className != null) {
       return 'serverpod_auth.$className';
     }
@@ -110,9 +126,12 @@ class Protocol extends _i1.SerializationManager {
     if (dataClassName == 'SyncEventType') {
       return deserialize<_i5.SyncEventType>(data['data']);
     }
+    if (dataClassName == 'TestData') {
+      return deserialize<_i6.TestData>(data['data']);
+    }
     if (dataClassName.startsWith('serverpod_auth.')) {
       data['className'] = dataClassName.substring(15);
-      return _i7.Protocol().deserializeByClassName(data);
+      return _i9.Protocol().deserializeByClassName(data);
     }
     return super.deserializeByClassName(data);
   }

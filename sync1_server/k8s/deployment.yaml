@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,7 +6,7 @@ metadata:
   labels:
     app: sync1-server
 spec:
-  replicas: 1 # Начнем с одной копии приложения
+  replicas: 1 
   selector:
     matchLabels:
       app: sync1-server
@@ -19,55 +20,50 @@ spec:
 
       containers:
       - name: sync1-server
-        # Указываем полный путь к нашему образу в реестре Timeweb
-        image: dbe81550-wise-chickadee.registry.twcstorage.ru/sync1-server:latest
+        
+        image: ...registry.twcstorage.ru/sync1-server:latest
         command: ["/usr/local/bin/server", "--mode", "production", "--role", "monolith"]
 
-
-        imagePullPolicy: Always # Всегда проверять наличие новой версии образа
+        imagePullPolicy: Always 
 
         ports:
-        - containerPort: 8080 # API
-        - containerPort: 8081 # Insights
-        - containerPort: 8082 # Web
+        - containerPort: 8080 
+        - containerPort: 8081 
+        - containerPort: 8082 
 
-        # --- Подключение настроек и секретов ---
         envFrom:
         - configMapRef:
-            name: serverpod-config # Наш ConfigMap
+            name: serverpod-config-sync1 
         
-        # Здесь мы берем пароли из Secret и передаем их
-        # как переменные окружения, которые ожидает Serverpod
         env:
         - name: SERVERPOD_DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: serverpod-secrets # Наш Secret
-              key: database-password # Ключ из Secret
+              name: serverpod-secrets-sync1 
+              key: database-password 
         - name: SERVERPOD_REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: serverpod-secrets
+              name: serverpod-secrets-sync1
               key: redis-password
         - name: SERVERPOD_SERVICE_SECRET
           valueFrom:
             secretKeyRef:
-              name: serverpod-secrets
+              name: serverpod-secrets-sync1
               key: service-secret
 
-        # --- Проверки работоспособности ---
-        # Проверка готовности: Kubernetes не будет отправлять трафик на под, пока эта проверка не пройдет
         readinessProbe:
           httpGet:
-            path: / # Проверяем главную страницу веб-сервера
+            path: / 
             port: 8082
-          initialDelaySeconds: 20 # Начать проверку через 20 секунд после старта
-          periodSeconds: 15     # Повторять каждые 15 секунд
+          initialDelaySeconds: 20 
+          periodSeconds: 15     
 
-        # Проверка "жизни": Kubernetes перезапустит под, если эта проверка не пройдет
         livenessProbe:
           httpGet:
             path: /
             port: 8082
-          initialDelaySeconds: 60 # Даем приложению минуту на полный запуск
+          initialDelaySeconds: 60 
           periodSeconds: 30
+
+    
