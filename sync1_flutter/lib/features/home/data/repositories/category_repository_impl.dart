@@ -90,52 +90,86 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   /// Метод для слияния серверных изменений с локальными и разрешения конфликтов.
   /// Возвращает список локальных изменений, которые нужно отправить на сервер.
   Future<List<CategoryTableData>> _reconcileChanges(List<serverpod.Category> serverChanges) async {
-    // Получаем все несинхронизированные локальные изменения
+    // Получаем все локальные записи, которые были изменены (статус не 'synced')
     final allLocalChanges = await (_categoryDao.select(_categoryDao.categoryTable)
           ..where((t) => (t.syncStatus.equals(SyncStatus.synced.name)).not() & t.userId.equals(_userId)))
         .get();
 
+    // Создаем карту для быстрого доступа к локальным изменениям и для отслеживания тех, что нужно будет отправить на сервер
     final localChangesMap = {for (var c in allLocalChanges) c.id: c};
 
+    // Выполняем все операции в рамках одной транзакции для целостности данных
     await _categoryDao.db.transaction(() async {
       for (final serverChange in serverChanges) {
-        // Пропускаем записи, не принадлежащие пользователю
+        // Пропускаем записи, которые по какой-то причине пришли для другого пользователя
         if (serverChange.userId != _userId) continue;
 
+        // --- БЛОК ОБРАБОТКИ УДАЛЕНИЯ (С РАСШИРЕННЫМ ЛОГИРОВАНИЕМ) ---
+        if (serverChange.isDeleted) {
+          final idToDelete = serverChange.id.toString();
+          print('    -> ПОЛУЧЕНО НАДГРОБИЕ с сервера для ID: $idToDelete. Пытаемся удалить локально...');
+
+          // ШАГ ДИАГНОСТИКИ 1: Проверяем, существует ли запись ПЕРЕД удалением
+          final recordExists = await (_categoryDao.select(_categoryDao.categoryTable)
+                ..where((t) => t.id.equals(idToDelete) & t.userId.equals(_userId)))
+              .getSingleOrNull();
+
+          if (recordExists != null) {
+            print('    -> ✅ Локальная запись для удаления найдена: ID=${recordExists.id}, Title="${recordExists.title}". Выполняем удаление...');
+            
+            // ШАГ ДИАГНОСТИКИ 2: Выполняем удаление и смотрим на результат
+            final deletedRowsCount = await _categoryDao.physicallyDeleteCategory(idToDelete, userId: _userId);
+            
+            print('    -> ⚙️ Результат операции: $deletedRowsCount строк удалено.');
+            
+            if(deletedRowsCount == 0) {
+                print('    -> ❌ КРИТИЧЕСКАЯ ОШИБКА: Запись была найдена, но не была удалена. Проверьте логику DAO или транзакции.');
+            }
+
+          } else {
+            print('    -> ⚠️ Локальная запись с ID $idToDelete для пользователя $_userId не найдена. Удаление не требуется.');
+          }
+          
+          // Удаляем запись из карты локальных изменений, т.к. серверное удаление имеет приоритет
+          localChangesMap.remove(idToDelete);
+          // Переходим к следующему изменению с сервера
+          continue; 
+        }
+        // --- КОНЕЦ БЛОКА УДАЛЕНИЯ ---
+
+        // Ищем локальную запись, соответствующую изменению с сервера
         final localRecord = await (_categoryDao.select(_categoryDao.categoryTable)
               ..where((t) => t.id.equals(serverChange.id.toString())))
             .getSingleOrNull();
 
+        // Если локальной записи нет, и это не "надгробие" - просто создаем ее.
         if (localRecord == null) {
-          // Записи нет локально, создаем ее с сервера
           await _categoryDao.db.into(_categoryDao.categoryTable).insertOnConflictUpdate(
                 serverChange.toCompanion(SyncStatus.synced),
               );
           print('    -> СОЗДАНО с сервера: "${serverChange.title}"');
-          continue;
+          continue; // Переходим к следующему изменению
         }
 
-        // Если есть локальные несинхронизированные изменения
+        // Если у локальной записи есть несохраненные изменения (статус local или deleted)
         if (localRecord.syncStatus == SyncStatus.local || localRecord.syncStatus == SyncStatus.deleted) {
-          // РАЗРЕШЕНИЕ КОНФЛИКТА ПО ВРЕМЕНИ
           final serverTime = serverChange.lastModified ?? DateTime.fromMicrosecondsSinceEpoch(0);
           final localTime = localRecord.lastModified;
           
+          // Конфликт: разрешаем в пользу более новой записи (lastModified)
           if (serverTime.isAfter(localTime)) {
-            // Сервер новее - применяем серверные изменения
             print('    -> КОНФЛИКТ: Сервер новее для "${serverChange.title}". Применяем серверные изменения.');
             await _categoryDao.db.into(_categoryDao.categoryTable).insertOnConflictUpdate(
                   serverChange.toCompanion(SyncStatus.synced),
                 );
-            // Удаляем из списка на отправку - конфликт решен в пользу сервера
+            // Так как мы применили серверную версию, удаляем локальные изменения из карты на отправку
             localChangesMap.remove(localRecord.id);
           } else {
-            // Локальная версия новее или время одинаковое - она будет отправлена на сервер
-            print('    -> КОНФЛИКТ: Локальная версия новее для "${localRecord.title}". Будет отправлена на сервер.');
-            // Локальная запись остается в localChangesMap
+            // Локальная версия новее, ничего не делаем, она останется в `localChangesMap` и будет отправлена на сервер позже.
+            print('    -> КОНФЛИКТ: Локальная версия новее для "${localRecord.title}". Она будет отправлена на сервер.');
           }
         } else {
-          // Нет локальных изменений - просто применяем данные с сервера
+          // Если локальных изменений нет, просто обновляем запись данными с сервера
           await _categoryDao.db.into(_categoryDao.categoryTable).insertOnConflictUpdate(
               serverChange.toCompanion(SyncStatus.synced),
             );
@@ -144,6 +178,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       }
     });
 
+    // Возвращаем оставшиеся локальные изменения, которые "выиграли" конфликты и должны быть отправлены на сервер
     return localChangesMap.values.toList();
   }
 
