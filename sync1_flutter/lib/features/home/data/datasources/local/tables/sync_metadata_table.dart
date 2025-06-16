@@ -6,6 +6,7 @@ class SyncMetadata extends Table {
   /// Тип сущности, для которой хранятся метаданные (например, 'categories', 'users').
   /// Является первичным ключом.
   TextColumn get entityType => text()();
+  IntColumn get userId => integer()();
 
   /// Время последней успешной синхронизации для данной сущности.
   /// Хранится в UTC. Может быть null, если синхронизация еще не проводилась.

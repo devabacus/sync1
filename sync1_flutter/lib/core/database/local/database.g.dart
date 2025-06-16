@@ -385,6 +385,15 @@ class $SyncMetadataTable extends SyncMetadata
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _lastSyncTimestampMeta = const VerificationMeta(
     'lastSyncTimestamp',
   );
@@ -423,6 +432,7 @@ class $SyncMetadataTable extends SyncMetadata
   @override
   List<GeneratedColumn> get $columns => [
     entityType,
+    userId,
     lastSyncTimestamp,
     syncVersion,
     updatedAt,
@@ -446,6 +456,14 @@ class $SyncMetadataTable extends SyncMetadata
       );
     } else if (isInserting) {
       context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
     }
     if (data.containsKey('last_sync_timestamp')) {
       context.handle(
@@ -487,6 +505,11 @@ class $SyncMetadataTable extends SyncMetadata
             DriftSqlType.string,
             data['${effectivePrefix}entity_type'],
           )!,
+      userId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}user_id'],
+          )!,
       lastSyncTimestamp: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_sync_timestamp'],
@@ -515,6 +538,7 @@ class SyncMetadataEntry extends DataClass
   /// Тип сущности, для которой хранятся метаданные (например, 'categories', 'users').
   /// Является первичным ключом.
   final String entityType;
+  final int userId;
 
   /// Время последней успешной синхронизации для данной сущности.
   /// Хранится в UTC. Может быть null, если синхронизация еще не проводилась.
@@ -530,6 +554,7 @@ class SyncMetadataEntry extends DataClass
   final DateTime updatedAt;
   const SyncMetadataEntry({
     required this.entityType,
+    required this.userId,
     this.lastSyncTimestamp,
     required this.syncVersion,
     required this.updatedAt,
@@ -538,6 +563,7 @@ class SyncMetadataEntry extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['entity_type'] = Variable<String>(entityType);
+    map['user_id'] = Variable<int>(userId);
     if (!nullToAbsent || lastSyncTimestamp != null) {
       map['last_sync_timestamp'] = Variable<DateTime>(lastSyncTimestamp);
     }
@@ -549,6 +575,7 @@ class SyncMetadataEntry extends DataClass
   SyncMetadataCompanion toCompanion(bool nullToAbsent) {
     return SyncMetadataCompanion(
       entityType: Value(entityType),
+      userId: Value(userId),
       lastSyncTimestamp:
           lastSyncTimestamp == null && nullToAbsent
               ? const Value.absent()
@@ -565,6 +592,7 @@ class SyncMetadataEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SyncMetadataEntry(
       entityType: serializer.fromJson<String>(json['entityType']),
+      userId: serializer.fromJson<int>(json['userId']),
       lastSyncTimestamp: serializer.fromJson<DateTime?>(
         json['lastSyncTimestamp'],
       ),
@@ -577,6 +605,7 @@ class SyncMetadataEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'entityType': serializer.toJson<String>(entityType),
+      'userId': serializer.toJson<int>(userId),
       'lastSyncTimestamp': serializer.toJson<DateTime?>(lastSyncTimestamp),
       'syncVersion': serializer.toJson<int>(syncVersion),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -585,11 +614,13 @@ class SyncMetadataEntry extends DataClass
 
   SyncMetadataEntry copyWith({
     String? entityType,
+    int? userId,
     Value<DateTime?> lastSyncTimestamp = const Value.absent(),
     int? syncVersion,
     DateTime? updatedAt,
   }) => SyncMetadataEntry(
     entityType: entityType ?? this.entityType,
+    userId: userId ?? this.userId,
     lastSyncTimestamp:
         lastSyncTimestamp.present
             ? lastSyncTimestamp.value
@@ -601,6 +632,7 @@ class SyncMetadataEntry extends DataClass
     return SyncMetadataEntry(
       entityType:
           data.entityType.present ? data.entityType.value : this.entityType,
+      userId: data.userId.present ? data.userId.value : this.userId,
       lastSyncTimestamp:
           data.lastSyncTimestamp.present
               ? data.lastSyncTimestamp.value
@@ -615,6 +647,7 @@ class SyncMetadataEntry extends DataClass
   String toString() {
     return (StringBuffer('SyncMetadataEntry(')
           ..write('entityType: $entityType, ')
+          ..write('userId: $userId, ')
           ..write('lastSyncTimestamp: $lastSyncTimestamp, ')
           ..write('syncVersion: $syncVersion, ')
           ..write('updatedAt: $updatedAt')
@@ -623,13 +656,19 @@ class SyncMetadataEntry extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(entityType, lastSyncTimestamp, syncVersion, updatedAt);
+  int get hashCode => Object.hash(
+    entityType,
+    userId,
+    lastSyncTimestamp,
+    syncVersion,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncMetadataEntry &&
           other.entityType == this.entityType &&
+          other.userId == this.userId &&
           other.lastSyncTimestamp == this.lastSyncTimestamp &&
           other.syncVersion == this.syncVersion &&
           other.updatedAt == this.updatedAt);
@@ -637,12 +676,14 @@ class SyncMetadataEntry extends DataClass
 
 class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
   final Value<String> entityType;
+  final Value<int> userId;
   final Value<DateTime?> lastSyncTimestamp;
   final Value<int> syncVersion;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const SyncMetadataCompanion({
     this.entityType = const Value.absent(),
+    this.userId = const Value.absent(),
     this.lastSyncTimestamp = const Value.absent(),
     this.syncVersion = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -650,14 +691,17 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
   });
   SyncMetadataCompanion.insert({
     required String entityType,
+    required int userId,
     this.lastSyncTimestamp = const Value.absent(),
     this.syncVersion = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : entityType = Value(entityType),
+       userId = Value(userId),
        updatedAt = Value(updatedAt);
   static Insertable<SyncMetadataEntry> custom({
     Expression<String>? entityType,
+    Expression<int>? userId,
     Expression<DateTime>? lastSyncTimestamp,
     Expression<int>? syncVersion,
     Expression<DateTime>? updatedAt,
@@ -665,6 +709,7 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
   }) {
     return RawValuesInsertable({
       if (entityType != null) 'entity_type': entityType,
+      if (userId != null) 'user_id': userId,
       if (lastSyncTimestamp != null) 'last_sync_timestamp': lastSyncTimestamp,
       if (syncVersion != null) 'sync_version': syncVersion,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -674,6 +719,7 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
 
   SyncMetadataCompanion copyWith({
     Value<String>? entityType,
+    Value<int>? userId,
     Value<DateTime?>? lastSyncTimestamp,
     Value<int>? syncVersion,
     Value<DateTime>? updatedAt,
@@ -681,6 +727,7 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
   }) {
     return SyncMetadataCompanion(
       entityType: entityType ?? this.entityType,
+      userId: userId ?? this.userId,
       lastSyncTimestamp: lastSyncTimestamp ?? this.lastSyncTimestamp,
       syncVersion: syncVersion ?? this.syncVersion,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -693,6 +740,9 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
     final map = <String, Expression>{};
     if (entityType.present) {
       map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
     }
     if (lastSyncTimestamp.present) {
       map['last_sync_timestamp'] = Variable<DateTime>(lastSyncTimestamp.value);
@@ -713,6 +763,7 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataEntry> {
   String toString() {
     return (StringBuffer('SyncMetadataCompanion(')
           ..write('entityType: $entityType, ')
+          ..write('userId: $userId, ')
           ..write('lastSyncTimestamp: $lastSyncTimestamp, ')
           ..write('syncVersion: $syncVersion, ')
           ..write('updatedAt: $updatedAt, ')
@@ -963,6 +1014,7 @@ typedef $$CategoryTableTableProcessedTableManager =
 typedef $$SyncMetadataTableCreateCompanionBuilder =
     SyncMetadataCompanion Function({
       required String entityType,
+      required int userId,
       Value<DateTime?> lastSyncTimestamp,
       Value<int> syncVersion,
       required DateTime updatedAt,
@@ -971,6 +1023,7 @@ typedef $$SyncMetadataTableCreateCompanionBuilder =
 typedef $$SyncMetadataTableUpdateCompanionBuilder =
     SyncMetadataCompanion Function({
       Value<String> entityType,
+      Value<int> userId,
       Value<DateTime?> lastSyncTimestamp,
       Value<int> syncVersion,
       Value<DateTime> updatedAt,
@@ -988,6 +1041,11 @@ class $$SyncMetadataTableFilterComposer
   });
   ColumnFilters<String> get entityType => $composableBuilder(
     column: $table.entityType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userId => $composableBuilder(
+    column: $table.userId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1021,6 +1079,11 @@ class $$SyncMetadataTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastSyncTimestamp => $composableBuilder(
     column: $table.lastSyncTimestamp,
     builder: (column) => ColumnOrderings(column),
@@ -1050,6 +1113,9 @@ class $$SyncMetadataTableAnnotationComposer
     column: $table.entityType,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get lastSyncTimestamp => $composableBuilder(
     column: $table.lastSyncTimestamp,
@@ -1102,12 +1168,14 @@ class $$SyncMetadataTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> entityType = const Value.absent(),
+                Value<int> userId = const Value.absent(),
                 Value<DateTime?> lastSyncTimestamp = const Value.absent(),
                 Value<int> syncVersion = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncMetadataCompanion(
                 entityType: entityType,
+                userId: userId,
                 lastSyncTimestamp: lastSyncTimestamp,
                 syncVersion: syncVersion,
                 updatedAt: updatedAt,
@@ -1116,12 +1184,14 @@ class $$SyncMetadataTableTableManager
           createCompanionCallback:
               ({
                 required String entityType,
+                required int userId,
                 Value<DateTime?> lastSyncTimestamp = const Value.absent(),
                 Value<int> syncVersion = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => SyncMetadataCompanion.insert(
                 entityType: entityType,
+                userId: userId,
                 lastSyncTimestamp: lastSyncTimestamp,
                 syncVersion: syncVersion,
                 updatedAt: updatedAt,
