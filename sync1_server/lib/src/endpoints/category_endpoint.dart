@@ -23,9 +23,11 @@ class CategoryEndpoint extends Endpoint {
 
   Future<Category> createCategory(Session session, Category category) async {
     final userId = await _getAuthenticatedUserId(session);
+    // При создании убеждаемся, что запись не помечена как удаленная
     final serverCategory = category.copyWith(
       userId: userId,
-      lastModified: DateTime.now().toUtc(),      
+      lastModified: DateTime.now().toUtc(),
+      isDeleted: false,      
     );
     final createdCategory = await Category.db.insertRow(session, serverCategory);
     await _notifyChange(session, CategorySyncEvent(
@@ -35,11 +37,13 @@ class CategoryEndpoint extends Endpoint {
     return createdCategory;
   }
 
+  // ИЗМЕНЕНО: Теперь возвращает только НЕ удаленные записи
   Future<List<Category>> getCategories(Session session) async {
     final userId = await _getAuthenticatedUserId(session);
     return await Category.db.find(
       session,
-      where: (c) => c.userId.equals(userId),
+      // Добавляем фильтр isDeleted == false
+      where: (c) => c.userId.equals(userId) & c.isDeleted.equals(false),
       orderBy: (c) => c.title,
     );
   }
@@ -49,19 +53,22 @@ class CategoryEndpoint extends Endpoint {
     
     return await Category.db.findFirstRow(
       session,
-      where: (c) => c.id.equals(id) & c.userId.equals(userId),
+      where: (c) => c.id.equals(id) & c.userId.equals(userId) & c.isDeleted.equals(false),
     );
   }
 
+  // ИЗМЕНЕНО: Теперь возвращает ВСЕ измененные записи, включая "надгробия"
   Future<List<Category>> getCategoriesSince(Session session, DateTime? since) async {
     final userId = await _getAuthenticatedUserId(session);
-    var whereClause = (Category.t.userId.equals(userId));
-    if (since != null) {
-      whereClause = whereClause & (Category.t.lastModified >= since);
+    // Если since не указан, возвращаем только активные записи (для первой синхронизации)
+    if (since == null) {
+      return getCategories(session);
     }
+
+    // Если since указан, возвращаем ВСЕ, что было изменено, включая удаленные
     return await Category.db.find(
       session,
-      where: (_) => whereClause,
+      where: (c) => c.userId.equals(userId) & (c.lastModified >= since),
       orderBy: (c) => c.lastModified,
     );
   }
@@ -70,7 +77,7 @@ class CategoryEndpoint extends Endpoint {
     final userId = await _getAuthenticatedUserId(session);
     final originalCategory = await Category.db.findFirstRow(
       session,
-      where: (c) => c.id.equals(category.id) & c.userId.equals(userId),
+      where: (c) => c.id.equals(category.id) & c.userId.equals(userId) & c.isDeleted.equals(false),
     );
     if (originalCategory == null) {
       return false; 
@@ -91,21 +98,35 @@ class CategoryEndpoint extends Endpoint {
     }
   }
 
+  // ИЗМЕНЕНО: Теперь не удаляет, а ставит флаг isDeleted = true
   Future<bool> deleteCategory(Session session, UuidValue id) async {
     final userId = await _getAuthenticatedUserId(session);
-    final result = await Category.db.deleteWhere(
+    
+    // Находим оригинальную запись
+    final originalCategory = await Category.db.findFirstRow(
       session,
       where: (c) => c.id.equals(id) & c.userId.equals(userId),
     );
-    if (result.isNotEmpty) {
-      await _notifyChange(session, CategorySyncEvent(
-        type: SyncEventType.delete,
-        id: id,
-      ), userId);
-      return true;
-    } else {
-      return false;
-    }
+
+    if (originalCategory == null) return false;
+
+    // Создаем "надгробие"
+    final tombstone = originalCategory.copyWith(
+      isDeleted: true,
+      lastModified: DateTime.now().toUtc(),
+    );
+
+    // Обновляем запись
+    final result = await Category.db.updateRow(session, tombstone);
+
+    // Отправляем событие об УДАЛЕНИИ, но с полной записью-"надгробием"
+    await _notifyChange(session, CategorySyncEvent(
+      type: SyncEventType.delete,
+      category: result, // Отправляем "надгробие"
+      id: id,
+    ), userId);
+
+    return true;
   }
 
   Stream<CategorySyncEvent> watchEvents(Session session) async* {
@@ -113,23 +134,12 @@ class CategoryEndpoint extends Endpoint {
     final channel = '$_categoryChannelBase$userId';
     session.log('🟢 Клиент (user: $userId) подписался на события в канале "$channel"');
     try {
-    await for (var event in session.messages.createStream<CategorySyncEvent>(channel)) {
-      session.log('🔄 Пересылаем событие ${event.type.name} клиенту (user: $userId)');
-      yield event;
+      await for (var event in session.messages.createStream<CategorySyncEvent>(channel)) {
+        session.log('🔄 Пересылаем событие ${event.type.name} клиенту (user: $userId)');
+        yield event;
+      }
+    } finally {
+      session.log('🔴 Клиент (user: $userId) отписался от канала "$channel"');
     }
-  } finally {
-    // Попробуйте получить userId без падения, если сессия уже невалидна
-    int? finalUserId;
-    try {
-      finalUserId = await _getAuthenticatedUserId(session);
-    } catch (_) {
-      // Пользователь уже не аутентифицирован, это нормально при закрытии сессии
-    }
-    if (finalUserId != null) {
-         session.log('🔴 Клиент (user: $finalUserId) отписался от канала "$channel"');
-    } else {
-         session.log('🔴 Клиент (сессия недействительна) отписался от канала "$channel"');
-    }
-  }
   }
 }

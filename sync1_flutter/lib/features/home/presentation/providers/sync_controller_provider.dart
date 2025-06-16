@@ -16,7 +16,7 @@ class SyncController extends _$SyncController {
   void build() {
     // Слушаем изменения статуса сети
     _subscription = Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
-    
+        
     // При уничтожении провайдера отписываемся от прослушивания
     ref.onDispose(() {
       _subscription?.cancel();

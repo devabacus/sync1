@@ -29,7 +29,7 @@ ICategoryLocalDataSource categoryLocalDataSource(Ref ref) {
 /// Каждый userId получает свой изолированный экземпляр репозитория
 @riverpod
 ICategoryRepository categoryRepository(Ref ref, int userId) {
-  ref.keepAlive();
+  // ref.keepAlive();
   
   // Получаем все зависимости
   final localDataSource = ref.watch(categoryLocalDataSourceProvider);

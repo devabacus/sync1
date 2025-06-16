@@ -17,13 +17,15 @@ abstract class Category implements _i1.SerializableModel {
     required this.title,
     this.lastModified,
     required this.userId,
-  });
+    bool? isDeleted,
+  }) : isDeleted = isDeleted ?? false;
 
   factory Category({
     _i1.UuidValue? id,
     required String title,
     DateTime? lastModified,
     required int userId,
+    bool? isDeleted,
   }) = _CategoryImpl;
 
   factory Category.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -37,6 +39,7 @@ abstract class Category implements _i1.SerializableModel {
           : _i1.DateTimeJsonExtension.fromJson(
               jsonSerialization['lastModified']),
       userId: jsonSerialization['userId'] as int,
+      isDeleted: jsonSerialization['isDeleted'] as bool,
     );
   }
 
@@ -51,6 +54,8 @@ abstract class Category implements _i1.SerializableModel {
 
   int userId;
 
+  bool isDeleted;
+
   /// Returns a shallow copy of this [Category]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
@@ -59,6 +64,7 @@ abstract class Category implements _i1.SerializableModel {
     String? title,
     DateTime? lastModified,
     int? userId,
+    bool? isDeleted,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -67,6 +73,7 @@ abstract class Category implements _i1.SerializableModel {
       'title': title,
       if (lastModified != null) 'lastModified': lastModified?.toJson(),
       'userId': userId,
+      'isDeleted': isDeleted,
     };
   }
 
@@ -84,11 +91,13 @@ class _CategoryImpl extends Category {
     required String title,
     DateTime? lastModified,
     required int userId,
+    bool? isDeleted,
   }) : super._(
           id: id,
           title: title,
           lastModified: lastModified,
           userId: userId,
+          isDeleted: isDeleted,
         );
 
   /// Returns a shallow copy of this [Category]
@@ -100,6 +109,7 @@ class _CategoryImpl extends Category {
     String? title,
     Object? lastModified = _Undefined,
     int? userId,
+    bool? isDeleted,
   }) {
     return Category(
       id: id is _i1.UuidValue? ? id : this.id,
@@ -107,6 +117,7 @@ class _CategoryImpl extends Category {
       lastModified:
           lastModified is DateTime? ? lastModified : this.lastModified,
       userId: userId ?? this.userId,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }

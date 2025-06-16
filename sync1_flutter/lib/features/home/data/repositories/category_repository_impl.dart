@@ -227,8 +227,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     return result;
   }
 
-  // --- ОСТАЛЬНАЯ ЧАСТЬ КЛАССА (без изменений) ---
-
   void _initEventBasedSync() {
     if (_isDisposed) return;
     print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${_reconnectionAttempt + 1}');

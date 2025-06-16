@@ -4,4 +4,5 @@ fields:
   id: UuidValue?, defaultPersist=random_v7
   title: String
   lastModified: DateTime?,
-  userId: int
+  userId: int,
+  isDeleted: bool, default=false

@@ -119,7 +119,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (currentUser?.id != null) {
       try {
         final syncMetadataDao = ref.read(syncMetadataDaoProvider);
-        
+             
         // ВАЖНО: Очищаем метаданные синхронизации для категорий
       await syncMetadataDao.clearSyncMetadata('categories', userId: currentUser!.id!);
 
