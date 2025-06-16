@@ -116,23 +116,23 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     await sessionManager.signOutDevice();
 
-    if (currentUser?.id != null) {
-      try {
-        final categoryDao = ref.read(categoryDaoProvider);
-        final syncMetadataDao = ref.read(syncMetadataDaoProvider);
+    // if (currentUser?.id != null) {
+    //   try {
+    //     final categoryDao = ref.read(categoryDaoProvider);
+    //     final syncMetadataDao = ref.read(syncMetadataDaoProvider);
         
-        // Очищаем категории пользователя
-        await categoryDao.deleteAllCategories(userId: currentUser!.id!);
+    //     // Очищаем категории пользователя
+    //     // await categoryDao.deleteAllCategories(userId: currentUser!.id!);
         
-        // ВАЖНО: Очищаем метаданные синхронизации для категорий
-        await syncMetadataDao.clearSyncMetadata('categories');
+    //     // ВАЖНО: Очищаем метаданные синхронизации для категорий
+    //     // await syncMetadataDao.clearSyncMetadata('categories');
         
-        print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
+    //     // print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
 
-      } catch (e) {
-        print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
-      }
-    }
+    //   } catch (e) {
+    //     print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
+    //   }
+    // }
   }
 
   void _addCategory() async {
@@ -358,7 +358,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         leading: const CircleAvatar(
           child: Icon(Icons.category),
         ),
-        title: Text(
+        title: Text( 
           category.title,
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),

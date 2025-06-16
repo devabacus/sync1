@@ -25,7 +25,7 @@ class CategoryEndpoint extends Endpoint {
     final userId = await _getAuthenticatedUserId(session);
     final serverCategory = category.copyWith(
       userId: userId,
-      lastModified: DateTime.now().toUtc(),
+      lastModified: DateTime.now().toUtc(),      
     );
     final createdCategory = await Category.db.insertRow(session, serverCategory);
     await _notifyChange(session, CategorySyncEvent(

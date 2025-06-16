@@ -18,7 +18,7 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     (select(categoryTable)
       ..where((t) => t.syncStatus.equals(SyncStatus.deleted.name).not())
       ..where((t) => userId != null ? t.userId.equals(userId) : const Constant(true)))
-    .get();
+    .get();     
 
   // Следить за изменениями категорий пользователя
   Stream<List<CategoryTableData>> watchCategories({int? userId}) =>
@@ -65,7 +65,6 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
- // Предлагаемое изменение в CategoryDao
 Future<bool> updateCategory(CategoryTableCompanion companion, {required int userId}) async {
     if (!companion.id.present || companion.id.value.isEmpty) {
         throw ArgumentError('ID категории должен быть предоставлен для обновления');
