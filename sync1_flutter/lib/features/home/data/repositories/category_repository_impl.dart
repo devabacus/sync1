@@ -227,7 +227,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
         if (event.category != null && event.category!.userId == _userId) {
           await _categoryDao.db.into(_categoryDao.categoryTable).insertOnConflictUpdate(
                 event.category!.toCompanion(SyncStatus.synced),
-              );
+              );         
           print('  -> Локально СОЗДАНА категория "${event.category!.title}" по событию с сервера.');
         }
         break;
