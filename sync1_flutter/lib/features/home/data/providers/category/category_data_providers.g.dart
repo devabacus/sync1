@@ -44,7 +44,7 @@ final categoryLocalDataSourceProvider =
 typedef CategoryLocalDataSourceRef =
     AutoDisposeProviderRef<ICategoryLocalDataSource>;
 String _$categoryRepositoryHash() =>
-    r'e6f61fbe6a2b2447cbcce4f6f64a7967749a763e';
+    r'030207b7b6b7e7517dbb59cf42310fdcf57b34ca';
 
 /// Copied from Dart SDK
 class _SystemHash {

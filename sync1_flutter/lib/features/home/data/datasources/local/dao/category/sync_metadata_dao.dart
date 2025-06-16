@@ -19,7 +19,7 @@ class SyncMetadataDao extends DatabaseAccessor<AppDatabase> with _$SyncMetadataD
 
   /// Получает время последней успешной синхронизации для указанной сущности.
   /// Возвращает null, если метаданные для этой сущности еще не существуют.
-  Future<DateTime?> getLastSyncTimestamp(String entityType) async {
+  Future<DateTime?> getLastSyncTimestamp(String entityType, {required int userId}) async {
     final entry = await (select(syncMetadata)
           ..where((t) => t.entityType.equals(entityType)))
         .getSingleOrNull();
@@ -28,10 +28,11 @@ class SyncMetadataDao extends DatabaseAccessor<AppDatabase> with _$SyncMetadataD
 
   /// Обновляет время последней успешной синхронизации для указанной сущности.
   /// Если запись для сущности не существует, она будет создана.
-  Future<void> updateLastSyncTimestamp(String entityType, DateTime timestamp) async {
+  Future<void> updateLastSyncTimestamp(String entityType, DateTime timestamp, {required int userId}) async {
     await into(syncMetadata).insert(
       SyncMetadataCompanion(
         entityType: Value(entityType),
+        userId: Value(userId),
         lastSyncTimestamp: Value(timestamp.toUtc()), // Храним в UTC
         updatedAt: Value(DateTime.now().toUtc()), // Обновляем время изменения
         // syncVersion будет установлен в дефолтное значение (1) при первой вставке
@@ -71,8 +72,9 @@ class SyncMetadataDao extends DatabaseAccessor<AppDatabase> with _$SyncMetadataD
   }
 
   /// Удаляет метаданные для указанной сущности.
-  Future<void> clearSyncMetadata(String entityType) async {
-    await (delete(syncMetadata)..where((t) => t.entityType.equals(entityType)))
+  Future<void> clearSyncMetadata(String entityType,  {required int userId}) async {
+    await (delete(syncMetadata)
+          ..where((t) => t.entityType.equals(entityType) & t.userId.equals(userId)))
         .go();
   }
 }

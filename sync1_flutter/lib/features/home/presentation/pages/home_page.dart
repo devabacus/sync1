@@ -116,23 +116,20 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     await sessionManager.signOutDevice();
 
-    // if (currentUser?.id != null) {
-    //   try {
-    //     final categoryDao = ref.read(categoryDaoProvider);
-    //     final syncMetadataDao = ref.read(syncMetadataDaoProvider);
-        
-    //     // Очищаем категории пользователя
-    //     // await categoryDao.deleteAllCategories(userId: currentUser!.id!);
-        
-    //     // ВАЖНО: Очищаем метаданные синхронизации для категорий
-    //     // await syncMetadataDao.clearSyncMetadata('categories');
-        
-    //     // print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
+    if (currentUser?.id != null) {
+      try {
+        final syncMetadataDao = ref.read(syncMetadataDaoProvider);
+             
+        // ВАЖНО: Очищаем метаданные синхронизации для категорий
+      await syncMetadataDao.clearSyncMetadata('categories', userId: currentUser!.id!);
 
-    //   } catch (e) {
-    //     print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
-    //   }
-    // }
+        
+        // print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
+
+      } catch (e) {
+        print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
+      }
+    }
   }
 
   void _addCategory() async {

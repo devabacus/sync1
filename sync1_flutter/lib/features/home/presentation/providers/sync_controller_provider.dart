@@ -2,72 +2,76 @@
 
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // <-- 1. ИМПОРТ ДЛЯ ProviderSubscription
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
+import 'package:serverpod_auth_client/serverpod_auth_client.dart'; // <-- 2. ЯВНЫЙ ИМПОРТ ДЛЯ UserInfo
+import '../../../../core/providers/session_manager_provider.dart';
 import '../../data/providers/category/category_data_providers.dart';
 
 part 'sync_controller_provider.g.dart';
 
 @riverpod
 class SyncController extends _$SyncController {
-  StreamSubscription? _subscription;
+  StreamSubscription? _connectivitySubscription;
+  ProviderSubscription? _authSubscription; // <-- 3. ИЗМЕНЕН ТИП ПЕРЕМЕННОЙ
 
   @override
   void build() {
-    // Слушаем изменения статуса сети
-    _subscription = Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
     
-    // При уничтожении провайдера отписываемся от прослушивания
+    _listenToAuthChanges(); 
+
     ref.onDispose(() {
-      _subscription?.cancel();
+      _connectivitySubscription?.cancel();
+      _authSubscription?.close(); // <-- 4. ДЛЯ ProviderSubscription ИСПОЛЬЗУЕТСЯ .close()
+    });
+  }
+
+  void _listenToAuthChanges() {
+    _authSubscription = ref.listen<AsyncValue<UserInfo?>>(userInfoStreamProvider, (previous, next) {
+      // Проверяем, изменилось ли состояние с "не залогинен" на "залогинен"
+      final wasLoggedIn = previous?.valueOrNull != null;
+      final isLoggedIn = next.valueOrNull != null;
+
+      if (!wasLoggedIn && isLoggedIn) {
+        print('✅ Обнаружен вход пользователя. Запускаем синхронизацию...');
+        _triggerSync();
+      }
     });
   }
 
   Future<void> _handleConnectivityChange(List<ConnectivityResult> results) async {
-    // Нас интересует только момент, когда соединение появляется, а не когда пропадает.
-    // Проверяем, что результат не 'none'.
     final isOnline = results.any((result) => result != ConnectivityResult.none);
 
     if (isOnline) {
       print('✅ Обнаружено подключение к сети. Запускаем синхронизацию...');
-      try {
-        // Получаем репозиторий текущего пользователя
-        final repository = ref.read(currentUserCategoryRepositoryProvider);
-        
-        if (repository != null) {
-          // Вызываем наш метод синхронизации из репозитория
-                    print('SYNC_CONTROLLER: Вызов repository.syncWithServer() для пользователя...');
-
-          await repository.syncWithServer();
-          print('👍 Синхронизация успешно запущена.');
-        } else {
-          print('ℹ️ Пользователь не авторизован. Синхронизация пропущена.');
-        }
-      } catch (e) {
-        print('❌ Ошибка во время автоматической синхронизации: $e');
-      }
+      _triggerSync();
     } else {
       print('🔌 Обнаружено отключение от сети.');
     }
   }
 
-  // Метод для ручного вызова синхронизации из UI, если потребуется
+  Future<void> _triggerSync() async {
+    try {
+      // Небольшая задержка, чтобы Riverpod успел перестроить все зависимые провайдеры
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      final repository = ref.read(currentUserCategoryRepositoryProvider);
+      
+      if (repository != null) {
+        print('SYNC_CONTROLLER: Вызов repository.syncWithServer() для пользователя...');
+        await repository.syncWithServer();
+        print('👍 Синхронизация успешно запущена.');
+      } else {
+        print('ℹ️ Пользователь не авторизован или репозиторий еще не готов. Синхронизация пропущена.');
+      }
+    } catch (e) {
+      print('❌ Ошибка во время автоматической синхронизации: $e');
+    }
+  }
+
   Future<void> triggerSync() async {
      print('🔄 Запуск ручной синхронизации...');
-     try {
-        // Получаем репозиторий текущего пользователя
-        final repository = ref.read(currentUserCategoryRepositoryProvider);
-        
-        if (repository != null) {
-          await repository.syncWithServer();
-          print('👍 Ручная синхронизация успешно запущена.');
-        } else {
-          print('ℹ️ Пользователь не авторизован. Синхронизация невозможна.');
-          throw Exception('Пользователь не авторизован');
-        }
-      } catch (e) {
-        print('❌ Ошибка во время ручной синхронизации: $e');
-        rethrow;
-      }
+     await _triggerSync();
   } 
 }
