@@ -17,16 +17,16 @@ class SyncEntityTypes {
 class SyncMetadataDao extends DatabaseAccessor<AppDatabase> with _$SyncMetadataDaoMixin {
   SyncMetadataDao(super.db);
 
-  /// Получает время последней успешной синхронизации для указанной сущности.
+  /// Получает время последней успешной синхронизации для указанной сущности и пользователя.
   /// Возвращает null, если метаданные для этой сущности еще не существуют.
   Future<DateTime?> getLastSyncTimestamp(String entityType, {required int userId}) async {
     final entry = await (select(syncMetadata)
-          ..where((t) => t.entityType.equals(entityType)))
+          ..where((t) => t.entityType.equals(entityType) & t.userId.equals(userId)))
         .getSingleOrNull();
     return entry?.lastSyncTimestamp;
   }
 
-  /// Обновляет время последней успешной синхронизации для указанной сущности.
+  /// Обновляет время последней успешной синхронизации для указанной сущности и пользователя.
   /// Если запись для сущности не существует, она будет создана.
   Future<void> updateLastSyncTimestamp(String entityType, DateTime timestamp, {required int userId}) async {
     await into(syncMetadata).insert(
@@ -43,36 +43,43 @@ class SyncMetadataDao extends DatabaseAccessor<AppDatabase> with _$SyncMetadataD
           updatedAt: Value(DateTime.now().toUtc()), // Обновляем время изменения
           // syncVersion остается прежним, поэтому не указываем его здесь для обновления
         ),
-        where: (old) => old.entityType.equals(entityType),
+        where: (old) => old.entityType.equals(entityType) & old.userId.equals(userId),
       ),
     );
   }
 
-  /// Получает версию синхронизации для указанной сущности.
+  /// Получает версию синхронизации для указанной сущности и пользователя.
   /// Возвращает дефолтное значение (1), если метаданды для этой сущности еще не существуют.
-  Future<int> getSyncVersion(String entityType) async {
+  Future<int> getSyncVersion(String entityType, {required int userId}) async {
     final entry = await (select(syncMetadata)
-          ..where((t) => t.entityType.equals(entityType)))
+          ..where((t) => t.entityType.equals(entityType) & t.userId.equals(userId)))
         .getSingleOrNull();
     // Если запись не найдена, возвращаем дефолтную версию 1.
     return entry?.syncVersion ?? 1;
   }
 
-  /// Обновляет версию синхронизации для указанной сущности.
+  /// Обновляет версию синхронизации для указанной сущности и пользователя.
   /// Если запись для сущности не существует, она будет создана.
-  Future<void> updateSyncVersion(String entityType, int version) async {
+  Future<void> updateSyncVersion(String entityType, int version, {required int userId}) async {
     await into(syncMetadata).insert(
       SyncMetadataCompanion(
         entityType: Value(entityType),
+        userId: Value(userId),
         syncVersion: Value(version),
         updatedAt: Value(DateTime.now().toUtc()), // Обновляем время изменения
       ),
-      onConflict: DoUpdate((old) => SyncMetadataCompanion(syncVersion: Value(version), updatedAt: Value(DateTime.now().toUtc())), where: (old) => old.entityType.equals(entityType)),
+      onConflict: DoUpdate(
+        (old) => SyncMetadataCompanion(
+          syncVersion: Value(version), 
+          updatedAt: Value(DateTime.now().toUtc())
+        ), 
+        where: (old) => old.entityType.equals(entityType) & old.userId.equals(userId)
+      ),
     );
   }
 
-  /// Удаляет метаданные для указанной сущности.
-  Future<void> clearSyncMetadata(String entityType,  {required int userId}) async {
+  /// Удаляет метаданные для указанной сущности и пользователя.
+  Future<void> clearSyncMetadata(String entityType, {required int userId}) async {
     await (delete(syncMetadata)
           ..where((t) => t.entityType.equals(entityType) & t.userId.equals(userId)))
         .go();

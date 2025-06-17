@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart'; // <-- 2. ЯВНЫЙ ИМПОРТ ДЛЯ UserInfo
 import '../../../../core/providers/session_manager_provider.dart';
 import '../../data/providers/category/category_data_providers.dart';
+import '../../data/repositories/category_repository_impl.dart';
 
 part 'sync_controller_provider.g.dart';
 
@@ -44,11 +45,17 @@ class SyncController extends _$SyncController {
     final isOnline = results.any((result) => result != ConnectivityResult.none);
 
     if (isOnline) {
-      print('✅ Обнаружено подключение к сети. Запускаем синхронизацию...');
-      _triggerSync();
-    } else {
-      print('🔌 Обнаружено отключение от сети.');
-    }
+  print('✅ Обнаружено подключение к сети.');
+  
+  // Сбрасываем счетчик для быстрого переподключения
+  final repository = ref.read(currentUserCategoryRepositoryProvider);
+  if (repository is CategoryRepositoryImpl) {
+    repository.reconnectionAttempt = 0; // или через публичный метод
+  }
+  
+  _triggerSync();
+}
+
   }
 
   Future<void> _triggerSync() async {
@@ -64,6 +71,10 @@ class SyncController extends _$SyncController {
         print('👍 Синхронизация успешно запущена.');
       } else {
         print('ℹ️ Пользователь не авторизован или репозиторий еще не готов. Синхронизация пропущена.');
+      }
+
+       if (repository is CategoryRepositoryImpl) {
+        repository.initEventBasedSync(); // подписываемся на websocket 
       }
     } catch (e) {
       print('❌ Ошибка во время автоматической синхронизации: $e');
