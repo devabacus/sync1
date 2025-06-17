@@ -22,20 +22,43 @@ class CategoryEndpoint extends Endpoint {
   }
 
   Future<Category> createCategory(Session session, Category category) async {
-    final userId = await _getAuthenticatedUserId(session);
-    // При создании убеждаемся, что запись не помечена как удаленная
-    final serverCategory = category.copyWith(
+  final userId = await _getAuthenticatedUserId(session);
+
+  // 1. ПРОВЕРКА: Ищем, существует ли уже запись с таким ID
+  final existingCategory = await Category.db.findFirstRow(
+    session,
+    where: (c) => c.id.equals(category.id) & c.userId.equals(userId),
+  );
+
+  final serverCategory = category.copyWith(
       userId: userId,
       lastModified: DateTime.now().toUtc(),
-      isDeleted: false,      
-    );
+      isDeleted: false,
+  );
+
+  // 2. УСЛОВИЕ: в зависимости от того, найдена ли запись
+  if (existingCategory != null) {
+    // 3. ОБНОВЛЕНИЕ (Воскрешение): Если запись найдена, обновляем ее
+    session.log('ℹ️ "createCategory" вызван для существующего ID. Выполняется обновление (воскрешение).');
+    final updatedCategory = await Category.db.updateRow(session, serverCategory);
+
+    // Уведомляем клиентов об ИЗМЕНЕНИИ (update), а не о создании
+    await _notifyChange(session, CategorySyncEvent(
+        type: SyncEventType.update, // Отправляем правильный тип события
+        category: updatedCategory,
+    ), userId);
+    return updatedCategory;
+
+  } else {
+    // 4. СОЗДАНИЕ: Если запись не найдена, создаем новую
     final createdCategory = await Category.db.insertRow(session, serverCategory);
     await _notifyChange(session, CategorySyncEvent(
-      type: SyncEventType.create,
-      category: createdCategory,
+        type: SyncEventType.create,
+        category: createdCategory,
     ), userId);
     return createdCategory;
   }
+}
 
   // ИЗМЕНЕНО: Теперь возвращает только НЕ удаленные записи
   Future<List<Category>> getCategories(Session session) async {
