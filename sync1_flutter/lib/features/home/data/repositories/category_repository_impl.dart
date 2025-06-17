@@ -31,8 +31,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   StreamSubscription? _eventStreamSubscription;
   bool _isSyncing = false;
   bool _isDisposed = false;
-  int _reconnectionAttempt = 0;
-  static const int _maxReconnectionAttempts = 5;
+  int reconnectionAttempt = 0;
 
   CategoryRepositoryImpl(
     this._localDataSource,
@@ -41,9 +40,11 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     this._userId,
   ) : _categoryDao = (_localDataSource as CategoryLocalDataSource).categoryDao {
     print('✅ CategoryRepositoryImpl: Создан экземпляр для userId: $_userId');
-    _initEventBasedSync();
+    initEventBasedSync();
   }
   
+
+
   // --- НОВАЯ, НАДЕЖНАЯ РЕАЛИЗАЦИЯ СИНХРОНИЗАЦИИ ---
   @override
   Future<void> syncWithServer() async {
@@ -262,30 +263,23 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     return result;
   }
 
-  void _initEventBasedSync() {
-    if (_isDisposed) return;
-    print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${_reconnectionAttempt + 1}');
-    _eventStreamSubscription?.cancel();
-    if (_reconnectionAttempt == 0) {
-      print('⏱️ Начальная задержка перед первой подпиской WebSocket для userId: $_userId...');
-      Future.delayed(const Duration(seconds: 2), () {
-        if (_isDisposed) return;
-        _subscribeToEvents();
-      });
-    } else {
-      _subscribeToEvents();
-    }
-  }
+ 
+ void initEventBasedSync() {
+  if (_isDisposed) return;
+  print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${reconnectionAttempt + 1}');
+  _eventStreamSubscription?.cancel();
+  _subscribeToEvents(); // Сразу подключаемся
+}
 
   void _subscribeToEvents() {
     if (_isDisposed) return;
-    print('🎧 CategoryRepositoryImpl: Выполняется подписка на события для userId: $_userId (попытка: ${_reconnectionAttempt})');
+    print('🎧 CategoryRepositoryImpl: Выполняется подписка на события для userId: $_userId (попытка: ${reconnectionAttempt})');
     _eventStreamSubscription = _remoteDataSource.watchEvents().listen(
       (event) {
         print('⚡️ Получено событие с сервера: ${event.type.name} (для userId: $_userId)');
-        if (_reconnectionAttempt > 0) {
+        if (reconnectionAttempt > 0) {
           print('👍 Соединение с real-time сервером восстановлено для userId: $_userId!');
-          _reconnectionAttempt = 0;
+          reconnectionAttempt = 0;
         }
         _handleSyncEvent(event);
       },
@@ -301,20 +295,21 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     );
   }
 
-  void _scheduleReconnection() {
-    if (_isDisposed) return;
-    _eventStreamSubscription?.cancel();
-    if (_reconnectionAttempt >= _maxReconnectionAttempts) {
-      print('🚫 Достигнуто максимальное количество попыток переподключения ($_maxReconnectionAttempts). Попытки прекращены.');
-      return;
-    }
-    final delaySeconds = min(pow(2, _reconnectionAttempt).toInt(), 20);
-    print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
-    Future.delayed(Duration(seconds: delaySeconds), () {
-      _reconnectionAttempt++;
-      _initEventBasedSync();
-    });
-  }
+void _scheduleReconnection() {
+  if (_isDisposed) return;
+  _eventStreamSubscription?.cancel();
+  
+  final delaySeconds = min(pow(2, reconnectionAttempt).toInt(), 60);
+  print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
+  
+  Future.delayed(Duration(seconds: delaySeconds), () {
+    reconnectionAttempt++;
+    initEventBasedSync();
+  });
+}
+
+// И в _handleConnectivityChange сбрасывать счетчик:
+
 
   Future<void> _handleSyncEvent(serverpod.CategorySyncEvent event) async {
     switch (event.type) {
