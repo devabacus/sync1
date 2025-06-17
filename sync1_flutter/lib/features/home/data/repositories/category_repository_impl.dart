@@ -20,7 +20,9 @@ import '../datasources/local/tables/category_table.dart';
 import '../datasources/remote/interfaces/category_remote_datasource_service.dart';
 
 class CategoryRepositoryImpl implements ICategoryRepository {
-  static const String _entityType = 'categories';
+  // static const String _entityType = 'categories';
+  String get _entityType => 'categories_user_$_userId'; // ← Персональный ключ
+
 
   final ICategoryLocalDataSource _localDataSource;
   final ICategoryRemoteDataSource _remoteDataSource;
