@@ -33,7 +33,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   StreamSubscription? _eventStreamSubscription;
   bool _isSyncing = false;
   bool _isDisposed = false;
-  int reconnectionAttempt = 0;
+  int reconnectionAttempt = 0;      
 
   CategoryRepositoryImpl(
     this._localDataSource,
