@@ -6,7 +6,7 @@ part of 'sync_controller_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$syncControllerHash() => r'a1749ad608106414dc2298f3a1d99750f6bae5ae';
+String _$syncControllerHash() => r'a8c592eb1f906923cabc8a0711eabfccc696e372';
 
 /// See also [SyncController].
 @ProviderFor(SyncController)
