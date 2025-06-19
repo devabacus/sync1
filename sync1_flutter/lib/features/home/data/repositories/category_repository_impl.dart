@@ -20,7 +20,6 @@ import '../datasources/local/tables/category_table.dart';
 import '../datasources/remote/interfaces/category_remote_datasource_service.dart';
 
 class CategoryRepositoryImpl implements ICategoryRepository {
-  // static const String _entityType = 'categories';
   String get _entityType => 'categories_user_$_userId'; // ← Персональный ключ
 
 
@@ -45,9 +44,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     initEventBasedSync();
   }
   
-
-
-  // --- НОВАЯ, НАДЕЖНАЯ РЕАЛИЗАЦИЯ СИНХРОНИЗАЦИИ ---
   @override
   Future<void> syncWithServer() async {
     if (_isSyncing) {
@@ -64,7 +60,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
       print('  [1/3] Получение изменений с сервера с момента: $lastSync');
       final serverChanges = await _remoteDataSource.getCategoriesSince(lastSync);
       print('    -> Получено ${serverChanges.length} изменений с сервера.');
-
+ 
       // --- ШАГ 2: РАЗРЕШЕНИЕ КОНФЛИКТОВ И СЛИЯНИЕ ---
       print('  [2/3] Слияние данных и разрешение конфликтов...');
       final localChangesToPush = await _reconcileChanges(serverChanges);
@@ -432,7 +428,6 @@ void _scheduleReconnection() {
   }
 }
 
-// --- РАСШИРЕНИЯ ---
 extension on CategoryEntity {
   serverpod.Category toServerpodCategory() => serverpod.Category(
         id: serverpod.UuidValue.fromString(id),

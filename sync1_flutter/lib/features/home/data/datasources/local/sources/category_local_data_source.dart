@@ -40,7 +40,7 @@ class CategoryLocalDataSource implements ICategoryLocalDataSource {
     // Это предполагает, что CategoryDao.updateCategory был изменен на:
     // Future<bool> updateCategory(CategoryTableCompanion companion, {required int userId})
     return categoryDao.updateCategory(category.toCompanionWithId(), userId: category.userId);
-  }
+  }   
 
   @override
   Future<bool> deleteCategory(String id, {required int userId}) async {
