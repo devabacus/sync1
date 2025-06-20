@@ -56,12 +56,10 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     try {
       final lastSync = await _syncMetadataDao.getLastSyncTimestamp(_entityType, userId: _userId);
 
-      // --- ШАГ 1: СНАЧАЛА ПОЛУЧАЕМ ИЗМЕНЕНИЯ С СЕРВЕРА ---
       print('  [1/3] Получение изменений с сервера с момента: $lastSync');
       final serverChanges = await _remoteDataSource.getCategoriesSince(lastSync);
       print('    -> Получено ${serverChanges.length} изменений с сервера.');
  
-      // --- ШАГ 2: РАЗРЕШЕНИЕ КОНФЛИКТОВ И СЛИЯНИЕ ---
       print('  [2/3] Слияние данных и разрешение конфликтов...');
       final localChangesToPush = await _reconcileChanges(serverChanges);
       print('    -> ${localChangesToPush.length} локальных изменений готовы к отправке.');
@@ -121,7 +119,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
           continue; // Переходим к следующему изменению
         }
 
-        // --- УЛУЧШЕННЫЙ БЛОК ОБРАБОТКИ УДАЛЕНИЯ / КОНФЛИКТОВ ---
         final serverTime = serverChange.lastModified ?? DateTime.fromMicrosecondsSinceEpoch(0);
         final localTime = localRecord.lastModified;
 
@@ -224,7 +221,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
           syncStatus: const Value(SyncStatus.local),
         );
     await _categoryDao.createCategory(companion);
-    // Запускаем фоновую синхронизацию без ожидания
     syncWithServer().catchError((e) {
       print('⚠️ Фоновая синхронизация после создания не удалась: $e');
     });
@@ -241,7 +237,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
           syncStatus: const Value(SyncStatus.local),
         );
     final result = await _categoryDao.updateCategory(companion, userId: _userId);
-    // Запускаем фоновую синхронизацию без ожидания
+    
     syncWithServer().catchError((e) {
       print('⚠️ Фоновая синхронизация после обновления не удалась: $e');
     });
@@ -258,10 +254,25 @@ class CategoryRepositoryImpl implements ICategoryRepository {
     return result;
   }
 
- 
+  @override
+  Future<List<CategoryEntity>> getCategories() async {
+    return _localDataSource.getCategories(userId: _userId).then((models) => models.toEntities());
+  }
+
+  @override
+  Future<CategoryEntity?> getCategoryById(String id) async {
+    try {
+      return _localDataSource.getCategoryById(id, userId: _userId).then((model) => model.toEntity());
+    } catch (e) {
+      return null;
+    }
+  }
+
+ @override
  void initEventBasedSync() {
   if (_isDisposed) return;
   print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${reconnectionAttempt + 1}');
+  reconnectionAttempt = 0;
   _eventStreamSubscription?.cancel();
   _subscribeToEvents(); // Сразу подключаемся
 }
@@ -302,9 +313,6 @@ void _scheduleReconnection() {
     initEventBasedSync();
   });
 }
-
-// И в _handleConnectivityChange сбрасывать счетчик:
-
 
   Future<void> _handleSyncEvent(serverpod.CategorySyncEvent event) async {
     switch (event.type) {
@@ -375,19 +383,6 @@ void _scheduleReconnection() {
     print('🛑 CategoryRepositoryImpl: Экземпляр для userId: $_userId УСПЕШНО УНИЧТОЖЕН. _isDisposed после вызова: $_isDisposed');
   }
 
-  @override
-  Future<List<CategoryEntity>> getCategories() async {
-    return _localDataSource.getCategories(userId: _userId).then((models) => models.toEntities());
-  }
-
-  @override
-  Future<CategoryEntity?> getCategoryById(String id) async {
-    try {
-      return _localDataSource.getCategoryById(id, userId: _userId).then((model) => model.toEntity());
-    } catch (e) {
-      return null;
-    }
-  }
 
   Future<void> _syncCreateToServer(CategoryEntity category) async {
     try {

@@ -112,25 +112,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
  void _logout() async {
     final sessionManager = ref.read(sessionManagerProvider);
-    final currentUser = ref.read(currentUserProvider);
-
     await sessionManager.signOutDevice();
-
-//     if (currentUser?.id != null) {
-//       try {
-//         final syncMetadataDao = ref.read(syncMetadataDaoProvider);
-             
-//         // ВАЖНО: Очищаем метаданные синхронизации для категорий
-//       // await syncMetadataDao.clearSyncMetadata('categories', userId: currentUser!.id!);
-
-// await syncMetadataDao.clearSyncMetadata('categories_user_${currentUser!.id!}', userId: currentUser.id!);
-        
-//         // print('🧹 Локальные данные пользователя ${currentUser.id} полностью очищены.');
-
-//       } catch (e) {
-//         print('❌ Ошибка при очистке локальных данных пользователя ${currentUser!.id}: $e');
-//       }
-//     }
   }
 
   void _addCategory() async {
@@ -151,7 +133,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       id: const Uuid().v7(),
       title: title,
       lastModified: DateTime.now().toUtc(),
-      userId: currentUser!.id!, // Используем ID текущего пользователя
+      userId: currentUser!.id!, 
     );
 
     // Получаем use case
@@ -184,7 +166,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final updatedCategory = category.copyWith(
       title: newTitle,
-      lastModified: DateTime.now().toUtc(),
     );
     
     // Получаем use case
