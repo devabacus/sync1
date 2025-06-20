@@ -33,6 +33,8 @@ class CategoryRepositoryImpl implements ICategoryRepository {
   bool _isSyncing = false;
   bool _isDisposed = false;
   int reconnectionAttempt = 0;      
+  int delaySeconds = 0;
+
 
   CategoryRepositoryImpl(
     this._localDataSource,
@@ -272,7 +274,6 @@ class CategoryRepositoryImpl implements ICategoryRepository {
  void initEventBasedSync() {
   if (_isDisposed) return;
   print('🌊 CategoryRepositoryImpl: _initEventBasedSync для userId: $_userId. Попытка #${reconnectionAttempt + 1}');
-  reconnectionAttempt = 0;
   _eventStreamSubscription?.cancel();
   _subscribeToEvents(); // Сразу подключаемся
 }
@@ -286,6 +287,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
         if (reconnectionAttempt > 0) {
           print('👍 Соединение с real-time сервером восстановлено для userId: $_userId!');
           reconnectionAttempt = 0;
+
         }
         _handleSyncEvent(event);
       },
@@ -305,7 +307,7 @@ void _scheduleReconnection() {
   if (_isDisposed) return;
   _eventStreamSubscription?.cancel();
   
-  final delaySeconds = min(pow(2, reconnectionAttempt).toInt(), 60);
+  delaySeconds = min(pow(2, reconnectionAttempt).toInt(), 60);
   print('⏱️ Следующая попытка подключения через $delaySeconds секунд.');
   
   Future.delayed(Duration(seconds: delaySeconds), () {
