@@ -287,6 +287,7 @@ class CategoryRepositoryImpl implements ICategoryRepository {
         if (reconnectionAttempt > 0) {
           print('👍 Соединение с real-time сервером восстановлено для userId: $_userId!');
           reconnectionAttempt = 0;
+          delaySeconds = 0;
 
         }
         _handleSyncEvent(event);
